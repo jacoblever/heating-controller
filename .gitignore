@@ -1,0 +1,8 @@
+# IDE files
+.idea
+
+# Environment for each Arduino project
+Environment.h
+
+# Build files
+bin

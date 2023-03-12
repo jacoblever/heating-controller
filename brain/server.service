@@ -1,0 +1,11 @@
+[Service]
+WorkingDirectory=/home/brain
+ExecStart=/home/brain/server
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=server
+User=root
+Group=root
+[Install]
+WantedBy=multi-user.target
