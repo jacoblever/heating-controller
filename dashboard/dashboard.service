@@ -1,0 +1,11 @@
+[Service]
+WorkingDirectory=/home/brain/dashboard
+ExecStart=python -m http.server 8000
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=dashboard
+User=root
+Group=root
+[Install]
+WantedBy=multi-user.target
