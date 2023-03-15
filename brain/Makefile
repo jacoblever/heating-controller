@@ -6,6 +6,10 @@ connect:
 build:
 	go build -o bin/server
 
+.PHONY: run
+run:
+	go run ./*.go
+
 .PHONY: deploy
 deploy:
 	echo "Building for pi architecture..."

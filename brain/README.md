@@ -36,3 +36,11 @@ Enable it and start it (or you could just reboot)
 sudo systemctl enable server
 sudo systemctl start server
 ```
+
+# Compiling the go server for Raspberry Pi
+
+See https://dev.to/coreyvan/from-zero-to-http-servers-with-go-and-raspberry-pi-3oi1
+
+```
+GOOS=linux GOARCH=arm GOARM=7 go build
+```

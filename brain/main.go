@@ -1,22 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
 
 func main() {
-	// Register handler for default route
 	http.HandleFunc("/update-temperature/", UpdateTemperatureHandler)
 	http.HandleFunc("/boiler-state/", BoilerStateHandler)
 	http.HandleFunc("/smart-switch-alive/", SmartSwitchAliveHandler)
 
-	// Start server listening
 	fmt.Println("Listening on port 8080...")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
@@ -27,6 +24,12 @@ func main() {
 var currentTemperatureFilePath string = "./current-temperature.txt"
 var smartSwitchLastAliveFilePath string = "./smart-switch-last-alive.txt"
 
+type UpdateTemperatureResponse struct {
+	// PollDelayMs is the number of milliseconds the Arduino should wait before making another request
+	PollDelayMs                int
+	ThermostatThresholdCelsius float32
+}
+
 func UpdateTemperatureHandler(w http.ResponseWriter, r *http.Request) {
 	temperature := r.URL.Query().Get("temperature")
 
@@ -34,7 +37,19 @@ func UpdateTemperatureHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeToFile(filePath, temperature)
 
-	fmt.Fprintf(w, "Got temp: %s", temperature)
+	response := UpdateTemperatureResponse{
+		PollDelayMs:                1000,
+		ThermostatThresholdCelsius: 24,
+	}
+	writeJSON(w, response)
+}
+
+type BoilerStateResponse struct {
+	// PollDelayMs is the number of milliseconds the Arduino should wait before making another request
+	PollDelayMs   int
+	BoilerState   string
+	MotorSpeedRPM int
+	StepsToTurn   int
 }
 
 func BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,33 +77,41 @@ func BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 		boilerState = "on"
 	}
 
-	fmt.Fprintf(w, "%s", boilerState)
+	response := BoilerStateResponse{
+		PollDelayMs:   1000,
+		BoilerState:   boilerState,
+		MotorSpeedRPM: 4,
+		StepsToTurn:   300,
+	}
+	writeJSON(w, response)
 }
 
-func readFile(filePath string) (string, error) {
-	buffer, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return string(buffer), err
+type SmartSwitchAliveResponse struct {
+	// PollDelayMs is the number of milliseconds the Arduino should wait before making another request
+	PollDelayMs int
 }
 
 func SmartSwitchAliveHandler(w http.ResponseWriter, r *http.Request) {
 	writeToFile(smartSwitchLastAliveFilePath, time.Now().Format(time.RFC3339))
+
+	response := SmartSwitchAliveResponse{
+		PollDelayMs: 1000,
+	}
+	writeJSON(w, response)
 }
 
-func writeToFile(filePath string, value string) {
-	f, err := os.Create(filePath)
+func writeJSON(w http.ResponseWriter, response any) {
+	jData, err := json.Marshal(response)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err2 := w.Write([]byte("{\"error\": \"marshal error\"}"))
+		if err2 != nil {
+			log.Fatal(err)
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(jData)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	n, err := f.WriteString(value)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("wrote %d bytes\n", n)
-	f.Sync()
 }
