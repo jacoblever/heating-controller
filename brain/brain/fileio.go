@@ -1,4 +1,4 @@
-package main
+package brain
 
 import (
 	"fmt"
@@ -10,7 +10,8 @@ import (
 func readFile(filePath string) (string, error) {
 	buffer, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("error reading file %s: %s\n", filePath, err)
+		return "", err
 	}
 
 	return string(buffer), err
