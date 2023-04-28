@@ -4,7 +4,8 @@
 #include <Arduino_JSON.h>
 #include "Environment.h"
 
-#define LED_PIN D3
+#define STANDBY_LED_PIN D3
+#define BOILER_STATUS_LED_PIN D2
 #define STEPS_IN_ONE_REVOLUTION 4096
 
 WiFiClient wifiClient;
@@ -16,7 +17,10 @@ String boilerState = "";
 
 void setup() {
   Serial.begin(9600);
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(STANDBY_LED_PIN, OUTPUT);
+  pinMode(BOILER_STATUS_LED_PIN, OUTPUT);
+  digitalWrite(STANDBY_LED_PIN, LOW);
+
   connectWiFi(WIFI_SSID, WIFI_PASSWORD);
 }
 
@@ -30,16 +34,17 @@ void loop() {
     String newBoilerState = response["BoilerState"];
     int motorSpeedRpm = response["MotorSpeedRPM"];
     int stepsToTurn = response["StepsToTurn"];
+    String command = response["Command"];
 
     if(newBoilerState == "on") {
-      digitalWrite(LED_PIN, HIGH);
+      digitalWrite(BOILER_STATUS_LED_PIN, HIGH);
 
       if(boilerState == "off") {
         Serial.println("Turning boiler on...");
         turnMotor(stepper, stepsToTurn, motorSpeedRpm);
       }
     } else if(newBoilerState == "off") {
-      digitalWrite(LED_PIN, LOW);
+      digitalWrite(BOILER_STATUS_LED_PIN, LOW);
 
       if(boilerState == "on") {
         Serial.println("Turning boiler off...");
@@ -50,6 +55,17 @@ void loop() {
       Serial.println(newBoilerState);
     }
     boilerState = newBoilerState;
+
+    if (boilerState == "on" || boilerState == "off") {
+      digitalWrite(STANDBY_LED_PIN, HIGH);
+    }
+
+    if(command != ""){
+      int steps = command.toInt();
+      Serial.print("Running command: ");
+      Serial.println(command);
+      turnMotor(stepper, steps, motorSpeedRpm);
+	  }
   }
   
   delay(pollDelayMs);

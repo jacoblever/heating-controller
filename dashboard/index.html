@@ -17,11 +17,36 @@
     <div>
         Current Temperature: <span id="current-temperature"></span>
     </div>
-    <label>
-        Thermostat Threshold (Celsius): <input type="text" id="thermostat-threshold-celsius" onchange="saveThermostatThreshold(this);"> <span id="saved"></span>
-    </label>
+    <div>
+        <label>
+            Thermostat Threshold (Celsius): <input type="text" id="thermostat-threshold-celsius" onchange="saveThermostatThreshold(this);"> <span id="thermostat-threshold-celsius-saved"></span>
+        </label>
+    </div>
+    <div>
+        <label>
+            Turn Boiler: <input type="text" id="turn-boiler-input"><button onclick="turnBoiler();">Send</button><span id="turn-boiler-sent"></span>
+        </label>
+    </div>
 
     <script type="text/javascript">
+        function turnBoiler(element) {
+            var command = document.getElementById("turn-boiler-input").value;
+            if(command === "") {
+                return;
+            }
+
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("GET", "http://192.168.86.100:8080/turn-boiler/?command=" + command, false);
+            xmlHttp.send(null);
+            console.log(xmlHttp.responseText);
+
+            var sentSpan = document.getElementById("turn-boiler-sent");
+            sentSpan.innerHTML = "Sent!";
+            setTimeout(function() {
+                sentSpan.innerHTML = "";
+            }, 2000);
+        }
+
         function saveThermostatThreshold(element) {
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.open("GET", "http://192.168.86.100:8080/update-thermostat/?threshold=" + element.value, false);
@@ -29,7 +54,7 @@
             console.log(xmlHttp.responseText);
             var data = JSON.parse(xmlHttp.responseText);
             updateUi(data);
-            var savedSpan = document.getElementById("saved");
+            var savedSpan = document.getElementById("thermostat-threshold-celsius-saved");
             savedSpan.innerHTML = "Saved!";
             setTimeout(function() {
                 savedSpan.innerHTML = "";

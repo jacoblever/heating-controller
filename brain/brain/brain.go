@@ -2,9 +2,11 @@ package brain
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,16 +21,18 @@ var DefaultConfig Config = Config{
 }
 
 type handlers struct {
-	config Config
+	config             Config
+	boilerCommandQueue []string
 }
 
 func CreateRouter(config Config) *http.ServeMux {
 	router := http.NewServeMux()
-	handlers := handlers{config: config}
+	handlers := handlers{config: config, boilerCommandQueue: make([]string, 0)}
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
 	router.HandleFunc("/update-thermostat/", handlers.UpdateThermostatHandler)
 	router.HandleFunc("/boiler-state/", handlers.BoilerStateHandler)
 	router.HandleFunc("/smart-switch-alive/", handlers.SmartSwitchAliveHandler)
+	router.HandleFunc("/turn-boiler/", handlers.TurnBoilerHandler)
 	return router
 }
 
@@ -102,18 +106,30 @@ type BoilerStateResponse struct {
 	BoilerState   string
 	MotorSpeedRPM int
 	StepsToTurn   int
+	Command       string
 }
 
-func (h handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 	boilerState := h.getBoilerState()
 
 	response := BoilerStateResponse{
 		PollDelayMs:   1000,
 		BoilerState:   boilerState,
 		MotorSpeedRPM: 4,
-		StepsToTurn:   300,
+		StepsToTurn:   250,
+		Command:       h.getNextBoilerCommand(),
 	}
 	writeJSON(w, response)
+}
+
+func (h *handlers) getNextBoilerCommand() string {
+	if len(h.boilerCommandQueue) == 0 {
+		return ""
+	}
+
+	command := h.boilerCommandQueue[0]
+	h.boilerCommandQueue = h.boilerCommandQueue[1:]
+	return command
 }
 
 type SmartSwitchAliveResponse struct {
@@ -130,14 +146,30 @@ func (h handlers) SmartSwitchAliveHandler(w http.ResponseWriter, r *http.Request
 	writeJSON(w, response)
 }
 
+func (h *handlers) TurnBoilerHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+
+	command := r.URL.Query().Get("command")
+	if command != "" {
+		h.boilerCommandQueue = append(h.boilerCommandQueue, command)
+	}
+
+	writeJSON(w, struct{}{})
+}
+
 func (h handlers) getBoilerState() string {
 	currentTemperature := h.getTemperature()
 	thermostatThreshold := h.getThermostat()
 	smartSwitchOn := h.getSmartSwitchStatus()
 
-	currentBoilerState, _ := readFile(h.config.BoilerStateFilePath)
-	if currentBoilerState == "" {
-		currentBoilerState = "off"
+	currentBoilerState := "off"
+	currentBoilerStateLine, _ := getLastLineWithSeek(h.config.BoilerStateFilePath)
+	if currentBoilerStateLine != "" {
+		parts := strings.Split(currentBoilerStateLine, ",")
+		if len(parts) == 2 {
+			currentBoilerState = parts[1]
+		}
 	}
 
 	boilerState := "off"
@@ -150,7 +182,14 @@ func (h handlers) getBoilerState() string {
 		}
 	}
 
-	writeToFile(h.config.BoilerStateFilePath, boilerState)
+	if currentBoilerState != boilerState {
+		line := fmt.Sprintf("%s,%s", time.Now().Format(time.RFC3339), boilerState)
+		err := appendToFile(h.config.BoilerStateFilePath, line)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	return boilerState
 }
 
