@@ -10,6 +10,10 @@ build:
 run:
 	go run ./*.go
 
+.PHONY: test
+test:
+	go test ./...
+
 .PHONY: deploy
 deploy:
 	echo "Building for pi architecture..."

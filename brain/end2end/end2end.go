@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jacoblever/heating-controller/brain/brain"
 )
@@ -16,6 +17,8 @@ type Context struct {
 	context.Context
 
 	BrainRouter *http.ServeMux
+	Config      brain.Config
+	Clock       *fakeClock
 }
 
 type Home struct {
@@ -93,16 +96,20 @@ func (d Dashboard) UpdateThermostat(t *testing.T, ctx Context, threshold float64
 }
 
 func CreateTestContext(t *testing.T) Context {
-	router := brain.CreateRouter(brain.DefaultConfig)
+	config := brain.DefaultConfig
+	clock := fakeClock{timeNow: time.Now()}
+	router := brain.CreateRouter(config, &clock)
 	ctx := Context{
 		Context:     context.Background(),
 		BrainRouter: router,
+		Config:      config,
+		Clock:       &clock,
 	}
 
 	t.Cleanup(func() {
-		for _, f := range brain.DefaultConfig.AllFilePaths() {
-			err := os.Remove(f)
-			t.Logf("clean up error: %s", err)
+		for _, f := range config.AllFilePaths() {
+			_ = os.Remove(f)
+			//t.Logf("clean up error: %s", err)
 		}
 	})
 	return ctx

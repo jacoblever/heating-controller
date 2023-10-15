@@ -5,7 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/jacoblever/heating-controller/brain/brain/clock"
 )
 
 var debounceBuffer = 0.5
@@ -13,6 +16,7 @@ var defaultThermostatThreshold float64 = 18
 
 var DefaultConfig Config = Config{
 	CurrentTemperatureFilePath:         "./current-temperature.txt",
+	TemperatureLogFilePath:             "./temperature-log.txt",
 	CurrentThermostatThresholdFilePath: "./current-thermostat-threshold.txt",
 	SmartSwitchLastAliveFilePath:       "./smart-switch-last-alive.txt",
 	BoilerStateFilePath:                "./boiler-state.txt",
@@ -20,11 +24,15 @@ var DefaultConfig Config = Config{
 
 type handlers struct {
 	config Config
+	clock  clock.Clock
 }
 
-func CreateRouter(config Config) *http.ServeMux {
+func CreateRouter(config Config, c clock.Clock) *http.ServeMux {
 	router := http.NewServeMux()
-	handlers := handlers{config: config}
+	if c == nil {
+		c = clock.CreateClock()
+	}
+	handlers := handlers{config: config, clock: c}
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
 	router.HandleFunc("/update-thermostat/", handlers.UpdateThermostatHandler)
 	router.HandleFunc("/boiler-state/", handlers.BoilerStateHandler)
@@ -34,6 +42,7 @@ func CreateRouter(config Config) *http.ServeMux {
 
 type Config struct {
 	CurrentTemperatureFilePath         string
+	TemperatureLogFilePath             string
 	CurrentThermostatThresholdFilePath string
 	SmartSwitchLastAliveFilePath       string
 	BoilerStateFilePath                string
@@ -42,6 +51,7 @@ type Config struct {
 func (c Config) AllFilePaths() []string {
 	return []string{
 		c.CurrentTemperatureFilePath,
+		c.TemperatureLogFilePath,
 		c.CurrentThermostatThresholdFilePath,
 		c.SmartSwitchLastAliveFilePath,
 		c.BoilerStateFilePath,
@@ -58,6 +68,21 @@ func (h handlers) UpdateTemperatureHandler(w http.ResponseWriter, r *http.Reques
 	temperature := r.URL.Query().Get("temperature")
 
 	writeToFile(h.config.CurrentTemperatureFilePath, temperature)
+
+	lastTemp, err := readLastLine(h.config.TemperatureLogFilePath)
+	if err != nil {
+		log.Printf("error reading: %s", err)
+		lastTemp = ""
+	}
+	lastTimeStr := strings.Split(lastTemp, ",")[0]
+	lastTime, err := time.Parse(time.RFC3339, lastTimeStr)
+	if err != nil {
+		log.Printf("error parsing time: %s", err)
+		lastTime = h.clock.Now().Add(-24 * time.Hour)
+	}
+	if lastTime.Add(10 * time.Minute).Before(h.clock.Now()) {
+		appendLineToFile(h.config.TemperatureLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), temperature}, ","))
+	}
 
 	response := UpdateTemperatureResponse{
 		PollDelayMs:                1000,
@@ -122,7 +147,7 @@ type SmartSwitchAliveResponse struct {
 }
 
 func (h handlers) SmartSwitchAliveHandler(w http.ResponseWriter, r *http.Request) {
-	writeToFile(h.config.SmartSwitchLastAliveFilePath, time.Now().Format(time.RFC3339))
+	writeToFile(h.config.SmartSwitchLastAliveFilePath, h.clock.Now().Format(time.RFC3339))
 
 	response := SmartSwitchAliveResponse{
 		PollDelayMs: 1000,
@@ -155,7 +180,7 @@ func (h handlers) getBoilerState() string {
 }
 
 func (h handlers) getSmartSwitchStatus() bool {
-	currentTime := time.Now()
+	currentTime := h.clock.Now()
 
 	timeValue, err := readFile(h.config.SmartSwitchLastAliveFilePath)
 	if err != nil {
