@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 export function Advanced() {
     const [command, setCommand] = useState<string>("");
