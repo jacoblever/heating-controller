@@ -54,17 +54,14 @@ func WriteToFile(filePath string, value string) {
 }
 
 func AppendLineToFile(filePath, line string) error {
-	// Open the file in append mode, creating it if it doesn't exist
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open file %s for append: %s", filePath, err)
 	}
 	defer file.Close()
 
-	_, err = file.WriteString("\n" + line)
-	if err != nil {
-		return err
+	if _, err = file.WriteString("\n" + line); err != nil {
+		return fmt.Errorf("failed to write to file %s: %s", filePath, err)
 	}
-
 	return nil
 }
