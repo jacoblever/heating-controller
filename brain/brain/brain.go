@@ -2,6 +2,7 @@ package brain
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 
 var debounceBuffer = 0.5
 var defaultThermostatThreshold float64 = 18
+var boilerSwitchStepCount = 250
 
 var DefaultConfig Config = Config{
 	CurrentTemperatureFilePath:         "./current-temperature.txt",
@@ -144,7 +146,7 @@ func (h *handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 		PollDelayMs:   1000,
 		BoilerState:   boilerState,
 		MotorSpeedRPM: 4,
-		StepsToTurn:   250,
+		StepsToTurn:   boilerSwitchStepCount,
 		Command:       h.getNextBoilerCommand(),
 	}
 	writeJSON(w, response)
@@ -180,7 +182,14 @@ func (h *handlers) TurnBoilerHandler(w http.ResponseWriter, r *http.Request) {
 
 	command := r.URL.Query().Get("command")
 	if command != "" {
-		h.boilerCommandQueue = append(h.boilerCommandQueue, command)
+		switch command {
+		case "turn-clockwise":
+			h.boilerCommandQueue = append(h.boilerCommandQueue, fmt.Sprintf("%d", boilerSwitchStepCount))
+		case "turn-anticlockwise":
+			h.boilerCommandQueue = append(h.boilerCommandQueue, fmt.Sprintf("-%d", boilerSwitchStepCount))
+		default:
+			h.boilerCommandQueue = append(h.boilerCommandQueue, command)
+		}
 	}
 
 	writeJSON(w, struct{}{})

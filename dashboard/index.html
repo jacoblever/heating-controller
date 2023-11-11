@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>heating-controller dashboard</title>
-    </head>
-    <body>
+
+<head>
+    <meta charset="UTF-8">
+    <title>heating-controller dashboard</title>
+</head>
+
+<body>
 
     <h1>heating-controller dashboard</h1>
 
@@ -19,20 +21,31 @@
     </div>
     <div>
         <label>
-            Thermostat Threshold (Celsius): <input type="text" id="thermostat-threshold-celsius" onchange="saveThermostatThreshold(this);"> <span id="thermostat-threshold-celsius-saved"></span>
+            Thermostat Threshold (Celsius): <input type="text" id="thermostat-threshold-celsius"
+                onchange="saveThermostatThreshold(this);"> <span id="thermostat-threshold-celsius-saved"></span>
         </label>
     </div>
     <div>
         <label>
-            Turn Boiler: <input type="text" id="turn-boiler-input"><button onclick="turnBoiler();">Send</button><span id="turn-boiler-sent"></span>
+            Turn Boiler (+ve is clockwise): <input type="text" id="turn-boiler-input"><button
+                onclick="turnBoiler();">Send</button><span id="turn-boiler-sent"></span>
         </label>
+    </div>
+    <div>
+        <button onclick="turnBoiler('turn-clockwise');">Turn Clockwise</button>
+        <button onclick="turnBoiler('turn-anticlockwise');">Turn Anticlockwise</button>
     </div>
 
     <script type="text/javascript">
-        function turnBoiler(element) {
-            var command = document.getElementById("turn-boiler-input").value;
-            if(command === "") {
-                return;
+        function turnBoiler(commandOverride) {
+            var command = "";
+            if (commandOverride) {
+                command = commandOverride;
+            } else {
+                command = document.getElementById("turn-boiler-input").value;
+                if (command === "") {
+                    return;
+                }
             }
 
             var xmlHttp = new XMLHttpRequest();
@@ -42,7 +55,7 @@
 
             var sentSpan = document.getElementById("turn-boiler-sent");
             sentSpan.innerHTML = "Sent!";
-            setTimeout(function() {
+            setTimeout(function () {
                 sentSpan.innerHTML = "";
             }, 2000);
         }
@@ -56,7 +69,7 @@
             updateUi(data);
             var savedSpan = document.getElementById("thermostat-threshold-celsius-saved");
             savedSpan.innerHTML = "Saved!";
-            setTimeout(function() {
+            setTimeout(function () {
                 savedSpan.innerHTML = "";
             }, 2000);
         }
@@ -72,12 +85,12 @@
             temperatureSpan.innerHTML = data["TemperatureCelsius"];
 
             var thresholdInput = document.getElementById("thermostat-threshold-celsius");
-            if(thresholdInput !== document.activeElement) {
+            if (thresholdInput !== document.activeElement) {
                 thresholdInput.value = data["ThermostatThresholdCelsius"];
             }
         }
 
-        setInterval(function() {
+        setInterval(function () {
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.open("GET", "http://192.168.86.100:8080/update-thermostat/", false);
             xmlHttp.send(null);
@@ -86,5 +99,6 @@
             updateUi(data);
         }, 1000);
     </script>
-    </body>
+</body>
+
 </html>
