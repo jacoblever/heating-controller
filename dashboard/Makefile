@@ -4,4 +4,6 @@ connect:
 
 .PHONY: deploy
 deploy:
-	scp index.html brain@192.168.86.100:/home/brain/dashboard/index.html
+	npm run build
+	ssh brain@192.168.86.100 'rm -rf /home/brain/dashboard/*'
+	scp -r ./build/* brain@192.168.86.100:/home/brain/dashboard/
