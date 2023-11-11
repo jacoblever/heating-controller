@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
+	"github.com/jacoblever/heating-controller/brain/brain/fileio"
 )
 
 var debounceBuffer = 0.5
@@ -20,6 +21,7 @@ var DefaultConfig Config = Config{
 	CurrentThermostatThresholdFilePath: "./current-thermostat-threshold.txt",
 	SmartSwitchLastAliveFilePath:       "./smart-switch-last-alive.txt",
 	BoilerStateFilePath:                "./boiler-state.txt",
+	BoilerStateLogFilePath:             "./boiler-state-log.txt",
 }
 
 type handlers struct {
@@ -46,6 +48,7 @@ type Config struct {
 	CurrentThermostatThresholdFilePath string
 	SmartSwitchLastAliveFilePath       string
 	BoilerStateFilePath                string
+	BoilerStateLogFilePath             string
 }
 
 func (c Config) AllFilePaths() []string {
@@ -55,6 +58,7 @@ func (c Config) AllFilePaths() []string {
 		c.CurrentThermostatThresholdFilePath,
 		c.SmartSwitchLastAliveFilePath,
 		c.BoilerStateFilePath,
+		c.BoilerStateLogFilePath,
 	}
 }
 
@@ -67,9 +71,9 @@ type UpdateTemperatureResponse struct {
 func (h handlers) UpdateTemperatureHandler(w http.ResponseWriter, r *http.Request) {
 	temperature := r.URL.Query().Get("temperature")
 
-	writeToFile(h.config.CurrentTemperatureFilePath, temperature)
+	fileio.WriteToFile(h.config.CurrentTemperatureFilePath, temperature)
 
-	lastTemp, err := readLastLine(h.config.TemperatureLogFilePath)
+	lastTemp, err := fileio.ReadLastLine(h.config.TemperatureLogFilePath)
 	if err != nil {
 		log.Printf("error reading: %s", err)
 		lastTemp = ""
@@ -80,8 +84,9 @@ func (h handlers) UpdateTemperatureHandler(w http.ResponseWriter, r *http.Reques
 		log.Printf("error parsing time: %s", err)
 		lastTime = h.clock.Now().Add(-24 * time.Hour)
 	}
+
 	if lastTime.Add(10 * time.Minute).Before(h.clock.Now()) {
-		appendLineToFile(h.config.TemperatureLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), temperature}, ","))
+		fileio.AppendLineToFile(h.config.TemperatureLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), temperature}, ","))
 	}
 
 	response := UpdateTemperatureResponse{
@@ -107,13 +112,13 @@ func (h handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request
 	threshold := r.URL.Query().Get("threshold")
 	if threshold != "" {
 		if _, err := strconv.ParseFloat(threshold, 32); err == nil {
-			writeToFile(h.config.CurrentThermostatThresholdFilePath, threshold)
+			fileio.WriteToFile(h.config.CurrentThermostatThresholdFilePath, threshold)
 		}
 	}
 
 	response := UpdateThermostatResponse{
 		PollDelayMs:                1000,
-		BoilerState:                h.getBoilerState(),
+		BoilerState:                h.getBoilerState(false),
 		SmartSwitchOn:              h.getSmartSwitchStatus(),
 		TemperatureCelsius:         h.getTemperature(),
 		ThermostatThresholdCelsius: h.getThermostat(),
@@ -130,7 +135,7 @@ type BoilerStateResponse struct {
 }
 
 func (h handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
-	boilerState := h.getBoilerState()
+	boilerState := h.getBoilerState(true)
 
 	response := BoilerStateResponse{
 		PollDelayMs:   1000,
@@ -147,7 +152,7 @@ type SmartSwitchAliveResponse struct {
 }
 
 func (h handlers) SmartSwitchAliveHandler(w http.ResponseWriter, r *http.Request) {
-	writeToFile(h.config.SmartSwitchLastAliveFilePath, h.clock.Now().Format(time.RFC3339))
+	fileio.WriteToFile(h.config.SmartSwitchLastAliveFilePath, h.clock.Now().Format(time.RFC3339))
 
 	response := SmartSwitchAliveResponse{
 		PollDelayMs: 1000,
@@ -155,12 +160,12 @@ func (h handlers) SmartSwitchAliveHandler(w http.ResponseWriter, r *http.Request
 	writeJSON(w, response)
 }
 
-func (h handlers) getBoilerState() string {
+func (h handlers) getBoilerState(logChange bool) string {
 	currentTemperature := h.getTemperature()
 	thermostatThreshold := h.getThermostat()
 	smartSwitchOn := h.getSmartSwitchStatus()
 
-	currentBoilerState, _ := readFile(h.config.BoilerStateFilePath)
+	currentBoilerState, _ := fileio.ReadFile(h.config.BoilerStateFilePath)
 	if currentBoilerState == "" {
 		currentBoilerState = "off"
 	}
@@ -175,14 +180,21 @@ func (h handlers) getBoilerState() string {
 		}
 	}
 
-	writeToFile(h.config.BoilerStateFilePath, boilerState)
+	fileio.WriteToFile(h.config.BoilerStateFilePath, boilerState)
+
+	if logChange {
+		if boilerState != currentBoilerState {
+			_ = fileio.AppendLineToFile(h.config.BoilerStateLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), boilerState}, ","))
+		}
+	}
+
 	return boilerState
 }
 
 func (h handlers) getSmartSwitchStatus() bool {
 	currentTime := h.clock.Now()
 
-	timeValue, err := readFile(h.config.SmartSwitchLastAliveFilePath)
+	timeValue, err := fileio.ReadFile(h.config.SmartSwitchLastAliveFilePath)
 	if err != nil {
 		timeValue = currentTime.Add(-100 * time.Hour).Format(time.RFC3339)
 	}
@@ -193,7 +205,7 @@ func (h handlers) getSmartSwitchStatus() bool {
 }
 
 func (h handlers) getThermostat() float64 {
-	thermostatThresholdValue, err := readFile(h.config.CurrentThermostatThresholdFilePath)
+	thermostatThresholdValue, err := fileio.ReadFile(h.config.CurrentThermostatThresholdFilePath)
 	if err != nil {
 		return defaultThermostatThreshold
 	}
@@ -206,7 +218,7 @@ func (h handlers) getThermostat() float64 {
 }
 
 func (h handlers) getTemperature() float64 {
-	temperatureValue, err := readFile(h.config.CurrentTemperatureFilePath)
+	temperatureValue, err := fileio.ReadFile(h.config.CurrentTemperatureFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}

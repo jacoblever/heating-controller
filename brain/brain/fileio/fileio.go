@@ -1,4 +1,4 @@
-package brain
+package fileio
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func readFile(filePath string) (string, error) {
+func ReadFile(filePath string) (string, error) {
 	buffer, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		log.Printf("error reading file %s: %s\n", filePath, err)
@@ -18,7 +18,7 @@ func readFile(filePath string) (string, error) {
 	return string(buffer), err
 }
 
-func readLastLine(filePath string) (string, error) {
+func ReadLastLine(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
@@ -38,7 +38,7 @@ func readLastLine(filePath string) (string, error) {
 	return lastLine, nil
 }
 
-func writeToFile(filePath string, value string) {
+func WriteToFile(filePath string, value string) {
 	f, err := os.Create(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -53,7 +53,7 @@ func writeToFile(filePath string, value string) {
 	f.Sync()
 }
 
-func appendLineToFile(filePath, line string) error {
+func AppendLineToFile(filePath, line string) error {
 	// Open the file in append mode, creating it if it doesn't exist
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
