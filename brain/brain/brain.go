@@ -43,6 +43,7 @@ func CreateRouter(config Config, c clock.Clock) *http.ServeMux {
 	router.HandleFunc("/boiler-state/", handlers.BoilerStateHandler)
 	router.HandleFunc("/smart-switch-alive/", handlers.SmartSwitchAliveHandler)
 	router.HandleFunc("/turn-boiler/", handlers.TurnBoilerHandler)
+	router.HandleFunc("/graph-data/", handlers.GraphDataHandler)
 	return router
 }
 
@@ -193,6 +194,45 @@ func (h *handlers) TurnBoilerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, struct{}{})
+}
+
+type TimePoint struct {
+	Time  int64
+	Value float64
+}
+
+type GraphDatResponse struct {
+	Temperature []TimePoint
+}
+
+func (h *handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+
+	response := GraphDatResponse{Temperature: make([]TimePoint, 0)}
+
+	data, _ := fileio.ReadFile(h.config.TemperatureLogFilePath)
+	lines := strings.Split(data, "\n")
+
+	for _, line := range lines {
+		parts := strings.Split(line, ",")
+		if len(parts) > 1 {
+			t, err := time.Parse(time.RFC3339, parts[0])
+			if err != nil {
+				continue
+			}
+			temperature, err := strconv.ParseFloat(parts[1], 32)
+			if err != nil {
+				continue
+			}
+			response.Temperature = append(response.Temperature, TimePoint{
+				Time:  t.UnixMilli(),
+				Value: temperature,
+			})
+		}
+	}
+
+	writeJSON(w, response)
 }
 
 func (h handlers) getBoilerState(logChange bool) string {

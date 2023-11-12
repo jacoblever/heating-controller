@@ -1,6 +1,7 @@
 import React, { ChangeEvent, useEffect, useState } from 'react';
 import './App.css';
 import { Advanced } from './Advanced';
+import { Graph } from './Graph';
 
 type BrainState = {
   PollDelayMs: number;
@@ -90,6 +91,8 @@ function App() {
         {!showAdvanced && <button onClick={() => setShowAdvanced(true)}>Show Advanced</button>}
         {showAdvanced && <button onClick={() => setShowAdvanced(false)}>Close Advanced</button>}
         {showAdvanced && <Advanced />}
+
+        <Graph />
       </div>
     </div>
   );
