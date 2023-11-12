@@ -203,36 +203,57 @@ type TimePoint struct {
 
 type GraphDatResponse struct {
 	Temperature []TimePoint
+	BoilerState []TimePoint
 }
 
 func (h *handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 
-	response := GraphDatResponse{Temperature: make([]TimePoint, 0)}
+	temperatureData := h.getData(h.config.TemperatureLogFilePath, func(v string) (float64, error) {
+		return strconv.ParseFloat(v, 32)
+	})
+	boilerStateData := h.getData(h.config.BoilerStateLogFilePath, func(v string) (float64, error) {
+		switch v {
+		case "on":
+			return 1, nil
+		case "off":
+			return 0, nil
+		default:
+			return 0, fmt.Errorf("boiler state %s invalid", v)
+		}
+	})
 
-	data, _ := fileio.ReadFile(h.config.TemperatureLogFilePath)
+	response := GraphDatResponse{Temperature: temperatureData, BoilerState: boilerStateData}
+
+	writeJSON(w, response)
+}
+
+func (h *handlers) getData(filePath string, parseValue func(v string) (float64, error)) []TimePoint {
+	data, _ := fileio.ReadFile(filePath)
 	lines := strings.Split(data, "\n")
+	var output []TimePoint
 
 	for _, line := range lines {
 		parts := strings.Split(line, ",")
 		if len(parts) > 1 {
 			t, err := time.Parse(time.RFC3339, parts[0])
 			if err != nil {
+				log.Printf("failed to parse timestamp in '%s' in %s", line, filePath)
 				continue
 			}
-			temperature, err := strconv.ParseFloat(parts[1], 32)
+			value, err := parseValue(parts[1])
 			if err != nil {
+				log.Printf("failed to parse value in '%s' in %s", line, filePath)
 				continue
 			}
-			response.Temperature = append(response.Temperature, TimePoint{
+			output = append(output, TimePoint{
 				Time:  t.UnixMilli(),
-				Value: temperature,
+				Value: value,
 			})
 		}
 	}
-
-	writeJSON(w, response)
+	return output
 }
 
 func (h handlers) getBoilerState(logChange bool) string {

@@ -12,6 +12,7 @@ type TimePoint = {
 
 type GraphDatResponse = {
     Temperature: TimePoint[]
+    BoilerState: TimePoint[]
 }
 
 export function Graph() {
@@ -25,7 +26,7 @@ export function Graph() {
             console.log(xmlHttp.responseText);
             var data: GraphDatResponse = JSON.parse(xmlHttp.responseText);
 
-            let myChart = new Chart(chartContainer.current, {
+            let myChart = new Chart<"line", number[] | { x: number, y: number }[]>(chartContainer.current, {
                 type: 'line',
                 data: {
                     labels: data.Temperature.map((p => p.Time)),
@@ -36,6 +37,19 @@ export function Graph() {
                             borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 1,
                             fill: false,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'stacked data',
+                            data: data.BoilerState.map((p) => {
+                                return { x: p.Time, y: p.Value }
+                            }),
+                            borderColor: ['rgba(255, 99, 132, 1)'], //red
+                            borderWidth: 0.1,
+                            pointRadius: 0,
+                            stepped: true,
+                            fill: true,
+                            yAxisID: 'y2'
                         },
                     ],
                 },
@@ -51,8 +65,12 @@ export function Graph() {
                                 },
                                 tooltipFormat: 'd MMM yyyy - HH:mm:ss'
                             },
-
-                        }
+                        },
+                        y1: {
+                        },
+                        y2: {
+                            display: false
+                        },
                     },
                     plugins: {
                         zoom: {
