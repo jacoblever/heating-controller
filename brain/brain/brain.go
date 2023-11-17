@@ -11,6 +11,7 @@ import (
 
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/fileio"
+	"github.com/jacoblever/heating-controller/brain/brain/logging"
 )
 
 var debounceBuffer = 0.5
@@ -30,14 +31,15 @@ type handlers struct {
 	config             Config
 	clock              clock.Clock
 	boilerCommandQueue []string
+	logger             logging.Logger
 }
 
-func CreateRouter(config Config, c clock.Clock) *http.ServeMux {
+func CreateRouter(config Config, c clock.Clock, logger logging.Logger) *http.ServeMux {
 	router := http.NewServeMux()
 	if c == nil {
 		c = clock.CreateClock()
 	}
-	handlers := handlers{config: config, clock: c, boilerCommandQueue: make([]string, 0)}
+	handlers := handlers{config: config, clock: c, boilerCommandQueue: make([]string, 0), logger: logger}
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
 	router.HandleFunc("/update-thermostat/", handlers.UpdateThermostatHandler)
 	router.HandleFunc("/boiler-state/", handlers.BoilerStateHandler)
@@ -118,12 +120,15 @@ func (h handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request
 	if threshold != "" {
 		if _, err := strconv.ParseFloat(threshold, 32); err == nil {
 			fileio.WriteToFile(h.config.CurrentThermostatThresholdFilePath, threshold)
+			h.logger.Log(fmt.Sprintf("Thermostat set to %s", threshold))
 		}
 	}
 
+	boilerState := h.getBoilerState(false)
+
 	response := UpdateThermostatResponse{
 		PollDelayMs:                1000,
-		BoilerState:                h.getBoilerState(false),
+		BoilerState:                boilerState,
 		SmartSwitchOn:              h.getSmartSwitchStatus(),
 		TemperatureCelsius:         h.getTemperature(),
 		ThermostatThresholdCelsius: h.getThermostat(),
@@ -261,7 +266,10 @@ func (h handlers) getBoilerState(logChange bool) string {
 	thermostatThreshold := h.getThermostat()
 	smartSwitchOn := h.getSmartSwitchStatus()
 
-	currentBoilerState, _ := fileio.ReadFile(h.config.BoilerStateFilePath)
+	currentBoilerState, err := fileio.ReadFile(h.config.BoilerStateFilePath)
+	if err != nil {
+		h.logger.Logf("error reading boiler state: %s", err)
+	}
 	if currentBoilerState == "" {
 		currentBoilerState = "off"
 	}
@@ -276,11 +284,17 @@ func (h handlers) getBoilerState(logChange bool) string {
 		}
 	}
 
-	fileio.WriteToFile(h.config.BoilerStateFilePath, boilerState)
+	err = fileio.WriteToFile(h.config.BoilerStateFilePath, boilerState)
+	if err != nil {
+		h.logger.Logf("error reading boiler state: %s", err)
+	}
 
 	if logChange {
 		if boilerState != currentBoilerState {
-			_ = fileio.AppendLineToFile(h.config.BoilerStateLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), boilerState}, ","))
+			err := fileio.AppendLineToFile(h.config.BoilerStateLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), boilerState}, ","))
+			if err != nil {
+				h.logger.Logf("error reading boiler state: %s", err)
+			}
 		}
 	}
 

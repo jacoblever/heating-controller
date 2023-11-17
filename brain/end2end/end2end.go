@@ -150,7 +150,7 @@ func (d Dashboard) TurnBoiler(t *testing.T, ctx Context, command string) (rawRes
 func CreateTestContext(t *testing.T) Context {
 	config := brain.DefaultConfig
 	clock := fakeClock{timeNow: time.Now()}
-	router := brain.CreateRouter(config, &clock)
+	router := brain.CreateRouter(config, &clock, &fakeLogger{})
 	ctx := Context{
 		Context:     context.Background(),
 		BrainRouter: router,

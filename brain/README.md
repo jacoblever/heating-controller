@@ -25,6 +25,12 @@ Copy the service config onto the pi
 scp server.service brain@192.168.86.100:/home/brain
 ```
 
+Copy the env file onto the pi (make sure you have created a `.env` file, based on `.env.template`, with the correct values)
+
+```
+scp .env brain@192.168.86.100:/home/brain/.env
+```
+
 SSH into brain, move it and give it the correct permitions
 ```
 sudo cp server.service /etc/systemd/system/

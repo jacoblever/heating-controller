@@ -4,5 +4,8 @@
 # Environment for each Arduino project
 Environment.h
 
+# Environment for brain
+brain/.env
+
 # Build files
 bin

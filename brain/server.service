@@ -1,5 +1,6 @@
 [Service]
 WorkingDirectory=/home/brain
+EnvironmentFile=/home/brain/.env
 ExecStart=/home/brain/server
 Restart=always
 StandardOutput=syslog

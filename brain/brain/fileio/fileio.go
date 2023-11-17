@@ -38,19 +38,20 @@ func ReadLastLine(filePath string) (string, error) {
 	return lastLine, nil
 }
 
-func WriteToFile(filePath string, value string) {
+func WriteToFile(filePath string, value string) error {
 	f, err := os.Create(filePath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	n, err := f.WriteString(value)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("wrote %d bytes\n", n)
-	f.Sync()
+	err = f.Sync()
+	return err
 }
 
 func AppendLineToFile(filePath, line string) error {
