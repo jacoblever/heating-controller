@@ -12,6 +12,8 @@ type TimePoint = {
 
 type GraphDatResponse = {
     Temperature: TimePoint[]
+    Temperature1: TimePoint[]
+    Temperature2: TimePoint[]
     BoilerState: TimePoint[]
 }
 
@@ -32,15 +34,37 @@ export function Graph() {
                     labels: data.Temperature.map((p => p.Time)),
                     datasets: [
                         {
-                            label: `Temperature`,
-                            data: data.Temperature.map((p) => p.Value),
+                            label: `Dining Room`,
+                            data: data.Temperature.map((p) => {
+                                return { x: p.Time, y: p.Value }
+                            }),
                             borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 1,
                             fill: false,
                             yAxisID: 'y1'
                         },
                         {
-                            label: 'stacked data',
+                            label: `Bedroom`,
+                            data: data.Temperature1.map((p) => {
+                                return { x: p.Time, y: p.Value }
+                            }),
+                            borderColor: 'yellow',
+                            borderWidth: 1,
+                            fill: false,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: `Lounge`,
+                            data: data.Temperature2.map((p) => {
+                                return { x: p.Time, y: p.Value }
+                            }),
+                            borderColor: 'orange',
+                            borderWidth: 1,
+                            fill: false,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Boiler State',
                             data: data.BoilerState.map((p) => {
                                 return { x: p.Time, y: p.Value }
                             }),

@@ -12,6 +12,7 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/fileio"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
+	"github.com/jacoblever/heating-controller/brain/brain/timeseries"
 )
 
 var debounceBuffer = 0.5
@@ -21,6 +22,8 @@ var boilerSwitchStepCount = 250
 var DefaultConfig Config = Config{
 	CurrentTemperatureFilePath:         "./current-temperature.txt",
 	TemperatureLogFilePath:             "./temperature-log.txt",
+	TemperatureLog1FilePath:            "./temperature-log-1.txt",
+	TemperatureLog2FilePath:            "./temperature-log-2.txt",
 	CurrentThermostatThresholdFilePath: "./current-thermostat-threshold.txt",
 	SmartSwitchLastAliveFilePath:       "./smart-switch-last-alive.txt",
 	BoilerStateFilePath:                "./boiler-state.txt",
@@ -41,6 +44,7 @@ func CreateRouter(config Config, c clock.Clock, logger logging.Logger) *http.Ser
 	}
 	handlers := handlers{config: config, clock: c, boilerCommandQueue: make([]string, 0), logger: logger}
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
+	router.HandleFunc("/temperature/", handlers.TemperatureHandler)
 	router.HandleFunc("/update-thermostat/", handlers.UpdateThermostatHandler)
 	router.HandleFunc("/boiler-state/", handlers.BoilerStateHandler)
 	router.HandleFunc("/smart-switch-alive/", handlers.SmartSwitchAliveHandler)
@@ -52,6 +56,8 @@ func CreateRouter(config Config, c clock.Clock, logger logging.Logger) *http.Ser
 type Config struct {
 	CurrentTemperatureFilePath         string
 	TemperatureLogFilePath             string
+	TemperatureLog1FilePath            string
+	TemperatureLog2FilePath            string
 	CurrentThermostatThresholdFilePath string
 	SmartSwitchLastAliveFilePath       string
 	BoilerStateFilePath                string
@@ -62,6 +68,8 @@ func (c Config) AllFilePaths() []string {
 	return []string{
 		c.CurrentTemperatureFilePath,
 		c.TemperatureLogFilePath,
+		c.TemperatureLog1FilePath,
+		c.TemperatureLog2FilePath,
 		c.CurrentThermostatThresholdFilePath,
 		c.SmartSwitchLastAliveFilePath,
 		c.BoilerStateFilePath,
@@ -80,27 +88,49 @@ func (h handlers) UpdateTemperatureHandler(w http.ResponseWriter, r *http.Reques
 
 	fileio.WriteToFile(h.config.CurrentTemperatureFilePath, temperature)
 
-	lastTemp, err := fileio.ReadLastLine(h.config.TemperatureLogFilePath)
-	if err != nil {
-		log.Printf("error reading: %s", err)
-		lastTemp = ""
-	}
-	lastTimeStr := strings.Split(lastTemp, ",")[0]
-	lastTime, err := time.Parse(time.RFC3339, lastTimeStr)
-	if err != nil {
-		log.Printf("error parsing time: %s", err)
-		lastTime = h.clock.Now().Add(-24 * time.Hour)
-	}
-
-	if lastTime.Add(10 * time.Minute).Before(h.clock.Now()) {
-		fileio.AppendLineToFile(h.config.TemperatureLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), temperature}, ","))
-	}
+	every := 10 * time.Minute
+	timeseries.Append(h.config.TemperatureLogFilePath, h.clock, temperature, &every)
 
 	response := UpdateTemperatureResponse{
 		PollDelayMs:                1000,
 		ThermostatThresholdCelsius: h.getThermostat(),
 	}
 	writeJSON(w, response)
+}
+
+type TemperatureResponse struct {
+	// PollDelayMs is the number of milliseconds the Arduino should wait before making another request
+	PollDelayMs int
+}
+
+func (h handlers) TemperatureHandler(w http.ResponseWriter, r *http.Request) {
+	temperature := r.URL.Query().Get("temperature")
+	id := r.URL.Query().Get("id")
+
+	filePath, err := h.getTemperatureLogFilePath(id)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	every := 10 * time.Minute
+	timeseries.Append(filePath, h.clock, temperature, &every)
+
+	response := TemperatureResponse{
+		PollDelayMs: 1000,
+	}
+	writeJSON(w, response)
+}
+
+func (h handlers) getTemperatureLogFilePath(id string) (string, error) {
+	switch id {
+	case "1":
+		return h.config.TemperatureLog1FilePath, nil
+	case "2":
+		return h.config.TemperatureLog2FilePath, nil
+	default:
+		return "", fmt.Errorf("getTemperatureLogFilePath: unknown device id %s", id)
+	}
 }
 
 type UpdateThermostatResponse struct {
@@ -207,8 +237,10 @@ type TimePoint struct {
 }
 
 type GraphDatResponse struct {
-	Temperature []TimePoint
-	BoilerState []TimePoint
+	Temperature  []TimePoint
+	Temperature1 []TimePoint
+	Temperature2 []TimePoint
+	BoilerState  []TimePoint
 }
 
 func (h *handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +248,12 @@ func (h *handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 
 	temperatureData := h.getData(h.config.TemperatureLogFilePath, func(v string) (float64, error) {
+		return strconv.ParseFloat(v, 32)
+	})
+	temperature1Data := h.getData(h.config.TemperatureLog1FilePath, func(v string) (float64, error) {
+		return strconv.ParseFloat(v, 32)
+	})
+	temperature2Data := h.getData(h.config.TemperatureLog2FilePath, func(v string) (float64, error) {
 		return strconv.ParseFloat(v, 32)
 	})
 	boilerStateData := h.getData(h.config.BoilerStateLogFilePath, func(v string) (float64, error) {
@@ -229,7 +267,12 @@ func (h *handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	response := GraphDatResponse{Temperature: temperatureData, BoilerState: boilerStateData}
+	response := GraphDatResponse{
+		Temperature:  temperatureData,
+		Temperature1: temperature1Data, // yellow
+		Temperature2: temperature2Data, // orange
+		BoilerState:  boilerStateData,
+	}
 
 	writeJSON(w, response)
 }
@@ -291,7 +334,7 @@ func (h handlers) getBoilerState(logChange bool) string {
 
 	if logChange {
 		if boilerState != currentBoilerState {
-			err := fileio.AppendLineToFile(h.config.BoilerStateLogFilePath, strings.Join([]string{h.clock.Now().Format(time.RFC3339), boilerState}, ","))
+			err := timeseries.Append(h.config.BoilerStateLogFilePath, h.clock, boilerState, nil)
 			if err != nil {
 				h.logger.Logf("error reading boiler state: %s", err)
 			}

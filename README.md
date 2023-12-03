@@ -14,6 +14,8 @@ https://diyi0t.com/esp8266-wemos-d1-mini-tutorial/
 Apple Silicon Macs need installation of Rosetta for the compilation to work. This just involves running `softwareupdate --install-rosetta` in Terminal and accepting the license agreement. More details can be found: here https://support.arduino.cc/hc/en-us/articles/7765785712156-Error-bad-CPU-type-in-executable-on-macOS
 
 
-Libraries used:
+Libraries used by Arduino project:
 
 * `Arduino_JSON` by `Arduino`
+* https://github.com/tripplefox/TsicSensor
+* https://github.com/olikraus/u8g2
