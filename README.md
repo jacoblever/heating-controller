@@ -19,3 +19,4 @@ Libraries used by Arduino project:
 * `Arduino_JSON` by `Arduino`
 * https://github.com/tripplefox/TsicSensor
 * https://github.com/olikraus/u8g2
+* https://github.com/plageoj/urlencode

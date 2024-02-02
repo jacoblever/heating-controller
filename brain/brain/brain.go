@@ -28,6 +28,7 @@ var DefaultConfig Config = Config{
 	SmartSwitchLastAliveFilePath:       "./smart-switch-last-alive.txt",
 	BoilerStateFilePath:                "./boiler-state.txt",
 	BoilerStateLogFilePath:             "./boiler-state-log.txt",
+	BoilerLogFilePath:                  "./boiler-log.txt",
 }
 
 type handlers struct {
@@ -62,6 +63,7 @@ type Config struct {
 	SmartSwitchLastAliveFilePath       string
 	BoilerStateFilePath                string
 	BoilerStateLogFilePath             string
+	BoilerLogFilePath                  string
 }
 
 func (c Config) AllFilePaths() []string {
@@ -74,6 +76,7 @@ func (c Config) AllFilePaths() []string {
 		c.SmartSwitchLastAliveFilePath,
 		c.BoilerStateFilePath,
 		c.BoilerStateLogFilePath,
+		c.BoilerLogFilePath,
 	}
 }
 
@@ -177,6 +180,16 @@ type BoilerStateResponse struct {
 
 func (h *handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 	boilerState := h.getBoilerState(true)
+	err := r.ParseForm()
+	if err != nil {
+		h.logger.Log("[BoilerStateHandler] failed to parse form from request")
+		w.WriteHeader(http.StatusBadRequest)
+	} else {
+		logLines := r.Form["Log"]
+		for _, line := range logLines {
+			timeseries.Append(h.config.BoilerLogFilePath, h.clock, line, nil)
+		}
+	}
 
 	response := BoilerStateResponse{
 		PollDelayMs:   1000,
