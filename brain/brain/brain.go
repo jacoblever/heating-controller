@@ -366,7 +366,7 @@ func (h handlers) getSmartSwitchStatus() bool {
 	}
 
 	lastAliveTime, err := time.Parse(time.RFC3339, timeValue)
-	smartSwitchOn := currentTime.Sub(lastAliveTime) < 3*time.Second
+	smartSwitchOn := currentTime.Sub(lastAliveTime) < 6*time.Second
 	return smartSwitchOn
 }
 
