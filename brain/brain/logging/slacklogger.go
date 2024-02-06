@@ -18,7 +18,7 @@ type slackLogger struct {
 	slackWebhookUrl string
 }
 
-func CreateLogger() Logger {
+func CreateSlackLogger() Logger {
 	return &slackLogger{
 		slackWebhookUrl: os.Getenv("SLACK_LOG_WEBHOOK_URL"),
 	}

@@ -12,7 +12,7 @@ import (
 var port = 8080
 
 func main() {
-	logger := logging.CreateLogger()
+	logger := logging.CreateSlackLogger()
 
 	router := brain.CreateRouter(brain.DefaultConfig, clock.CreateClock(), logger)
 

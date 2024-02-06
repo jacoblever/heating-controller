@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jacoblever/heating-controller/brain/brain"
+	"github.com/jacoblever/heating-controller/brain/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ type Context struct {
 
 	BrainRouter *http.ServeMux
 	Config      brain.Config
-	Clock       *fakeClock
+	Clock       *common.FakeClock
 }
 
 type Home struct {
@@ -149,7 +150,7 @@ func (d Dashboard) TurnBoiler(t *testing.T, ctx Context, command string) (rawRes
 
 func CreateTestContext(t *testing.T) Context {
 	config := brain.DefaultConfig
-	clock := fakeClock{timeNow: time.Now()}
+	clock := common.FakeClock{TimeNow: time.Now()}
 	router := brain.CreateRouter(config, &clock, &fakeLogger{})
 	ctx := Context{
 		Context:     context.Background(),
