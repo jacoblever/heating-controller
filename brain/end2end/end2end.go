@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jacoblever/heating-controller/brain/brain"
+	"github.com/jacoblever/heating-controller/brain/brain/logging"
 	"github.com/jacoblever/heating-controller/brain/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -151,7 +152,8 @@ func (d Dashboard) TurnBoiler(t *testing.T, ctx Context, command string) (rawRes
 func CreateTestContext(t *testing.T) Context {
 	config := brain.DefaultConfig
 	clock := common.FakeClock{TimeNow: time.Now()}
-	router := brain.CreateRouter(config, &clock, &fakeLogger{})
+	loggers := logging.InitLoggers(&clock, &logging.SystemOutLogger{})
+	router := brain.CreateRouter(config, &clock, loggers)
 	ctx := Context{
 		Context:     context.Background(),
 		BrainRouter: router,
@@ -163,6 +165,7 @@ func CreateTestContext(t *testing.T) Context {
 		for _, f := range config.AllFilePaths() {
 			_ = os.Remove(f)
 		}
+		loggers.CleanUpAnyLogs()
 	})
 	return ctx
 }

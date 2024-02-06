@@ -35,15 +35,15 @@ type handlers struct {
 	config             Config
 	clock              clock.Clock
 	boilerCommandQueue []string
-	logger             logging.Logger
+	loggers            logging.Loggers
 }
 
-func CreateRouter(config Config, c clock.Clock, logger logging.Logger) *http.ServeMux {
+func CreateRouter(config Config, c clock.Clock, loggers logging.Loggers) *http.ServeMux {
 	router := http.NewServeMux()
 	if c == nil {
 		c = clock.CreateClock()
 	}
-	handlers := handlers{config: config, clock: c, boilerCommandQueue: make([]string, 0), logger: logger}
+	handlers := handlers{config: config, clock: c, boilerCommandQueue: make([]string, 0), loggers: loggers}
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
 	router.HandleFunc("/temperature/", handlers.TemperatureHandler)
 	router.HandleFunc("/update-thermostat/", handlers.UpdateThermostatHandler)
@@ -51,6 +51,9 @@ func CreateRouter(config Config, c clock.Clock, logger logging.Logger) *http.Ser
 	router.HandleFunc("/smart-switch-alive/", handlers.SmartSwitchAliveHandler)
 	router.HandleFunc("/turn-boiler/", handlers.TurnBoilerHandler)
 	router.HandleFunc("/graph-data/", handlers.GraphDataHandler)
+
+	loggers.NewPerDayLogger("boiler", logging.Settings{DaysToKeepFor: 14})
+	loggers.NewPerDayLogger("brain", logging.Settings{DaysToKeepFor: 14})
 	return router
 }
 
@@ -153,7 +156,7 @@ func (h handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request
 	if threshold != "" {
 		if _, err := strconv.ParseFloat(threshold, 32); err == nil {
 			fileio.WriteToFile(h.config.CurrentThermostatThresholdFilePath, threshold)
-			h.logger.Log(fmt.Sprintf("Thermostat set to %s", threshold))
+			h.loggers.SlackLogger.Log(fmt.Sprintf("Thermostat set to %s", threshold))
 		}
 	}
 
@@ -182,12 +185,12 @@ func (h *handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 	boilerState := h.getBoilerState(true)
 	err := r.ParseForm()
 	if err != nil {
-		h.logger.Log("[BoilerStateHandler] failed to parse form from request")
+		h.loggers.SlackLogger.Log("[BoilerStateHandler] failed to parse form from request")
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
 		logLines := r.Form["Log"]
 		for _, line := range logLines {
-			timeseries.Append(h.config.BoilerLogFilePath, h.clock, line, nil)
+			h.loggers.Get("boiler").Log(line)
 		}
 	}
 
@@ -324,7 +327,7 @@ func (h handlers) getBoilerState(logChange bool) string {
 
 	currentBoilerState, err := fileio.ReadFile(h.config.BoilerStateFilePath)
 	if err != nil {
-		h.logger.Logf("error reading boiler state: %s", err)
+		h.loggers.Get("brain").Logf("error reading boiler state: %s", err)
 	}
 	if currentBoilerState == "" {
 		currentBoilerState = "off"
@@ -342,15 +345,20 @@ func (h handlers) getBoilerState(logChange bool) string {
 
 	err = fileio.WriteToFile(h.config.BoilerStateFilePath, boilerState)
 	if err != nil {
-		h.logger.Logf("error reading boiler state: %s", err)
+		h.loggers.Get("brain").Logf("error reading boiler state: %s", err)
 	}
 
 	if logChange {
 		if boilerState != currentBoilerState {
 			err := timeseries.Append(h.config.BoilerStateLogFilePath, h.clock, boilerState, nil)
 			if err != nil {
-				h.logger.Logf("error reading boiler state: %s", err)
+				h.loggers.Get("brain").Logf("error reading boiler state: %s", err)
 			}
+
+			h.loggers.Get("brain").Logf(
+				"boiler state changing from %s to %s (smartSwitchOn: %s, currentTemperature: %s, thermostatThreshold: %s)",
+				currentBoilerState, boilerState, smartSwitchOn, currentTemperature, thermostatThreshold,
+			)
 		}
 	}
 

@@ -12,9 +12,11 @@ import (
 var port = 8080
 
 func main() {
-	logger := logging.CreateSlackLogger()
+	clock := clock.CreateClock()
+	slackLogger := logging.CreateSlackLogger()
+	loggers := logging.InitLoggers(clock, slackLogger)
 
-	router := brain.CreateRouter(brain.DefaultConfig, clock.CreateClock(), logger)
+	router := brain.CreateRouter(brain.DefaultConfig, clock, loggers)
 
 	fmt.Println(fmt.Sprintf("Listening on port %d...", port))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), router)

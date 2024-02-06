@@ -9,11 +9,6 @@ import (
 	"os"
 )
 
-type Logger interface {
-	Logf(message string, a ...any)
-	Log(message string)
-}
-
 type slackLogger struct {
 	slackWebhookUrl string
 }
