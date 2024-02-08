@@ -38,6 +38,11 @@ func (l *PerDayLogger) Log(message string) {
 
 func (l *PerDayLogger) GetLogs() ([]string, error) {
 	logs := []string{}
+
+	if err := os.MkdirAll(l.Key, 0755); err != nil {
+		return logs, err
+	}
+
 	entries, err := os.ReadDir(l.Key)
 	if err != nil {
 		return logs, err

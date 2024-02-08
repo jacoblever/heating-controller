@@ -9,6 +9,7 @@ type Logger interface {
 
 type FileLogger interface {
 	Logger
+	GetLogs() ([]string, error)
 	DeleteAllLogs() error
 }
 
@@ -26,7 +27,7 @@ func InitLoggers(clock clock.Clock, slackLogger Logger) Loggers {
 	}
 }
 
-func (l *Loggers) Get(key string) Logger {
+func (l *Loggers) Get(key string) FileLogger {
 	logger, ok := l.Loggers[key]
 	if !ok {
 		l.SlackLogger.Logf("logger %s does not exist. Using SystemOutLogger instead", key)

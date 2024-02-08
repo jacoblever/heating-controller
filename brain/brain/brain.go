@@ -51,6 +51,7 @@ func CreateRouter(config Config, c clock.Clock, loggers logging.Loggers) *http.S
 	router.HandleFunc("/smart-switch-alive/", handlers.SmartSwitchAliveHandler)
 	router.HandleFunc("/turn-boiler/", handlers.TurnBoilerHandler)
 	router.HandleFunc("/graph-data/", handlers.GraphDataHandler)
+	router.HandleFunc("/logs/", handlers.LogsHandler)
 
 	loggers.NewPerDayLogger("boiler", logging.Settings{DaysToKeepFor: 14})
 	loggers.NewPerDayLogger("brain", logging.Settings{DaysToKeepFor: 14})
@@ -318,6 +319,41 @@ func (h *handlers) getData(filePath string, parseValue func(v string) (float64, 
 		}
 	}
 	return output
+}
+
+type LogLine struct {
+	Time    int64
+	Message string
+}
+
+type LogsResponse struct {
+	Boiler []LogLine
+	Brain  []LogLine
+}
+
+func (h *handlers) LogsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+
+	response := LogsResponse{
+		Boiler: h.getLogs("boiler"),
+		Brain:  h.getLogs("brain"),
+	}
+
+	writeJSON(w, response)
+}
+
+func (h *handlers) getLogs(key string) []LogLine {
+	lines, err := h.loggers.Get(key).GetLogs()
+	if err != nil {
+		return []LogLine{LogLine{Message: fmt.Sprintf("error getting logger: %s", err.Error())}}
+	}
+
+	var logLines []LogLine = []LogLine{}
+	for _, line := range lines {
+		logLines = append(logLines, LogLine{Message: line})
+	}
+	return logLines
 }
 
 func (h handlers) getBoilerState(logChange bool) string {

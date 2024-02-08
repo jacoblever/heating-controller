@@ -2,6 +2,7 @@ import React, { ChangeEvent, useEffect, useState } from 'react';
 import './App.css';
 import { Advanced } from './Advanced';
 import { Graph } from './Graph';
+import { Logs } from './Logs';
 
 type BrainState = {
   PollDelayMs: number;
@@ -93,6 +94,7 @@ function App() {
         {showAdvanced && <Advanced />}
 
         <Graph />
+        <Logs />
       </div>
     </div>
   );
