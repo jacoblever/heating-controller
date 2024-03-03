@@ -392,7 +392,7 @@ func (h handlers) getBoilerState(logChange bool) string {
 			}
 
 			h.loggers.Get("brain").Logf(
-				"boiler state changing from %s to %s (smartSwitchOn: %s, currentTemperature: %s, thermostatThreshold: %s)",
+				"boiler state changing from %s to %s (smartSwitchOn: %t, currentTemperature: %.2f, thermostatThreshold: %.2f)",
 				currentBoilerState, boilerState, smartSwitchOn, currentTemperature, thermostatThreshold,
 			)
 		}
