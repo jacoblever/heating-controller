@@ -345,7 +345,7 @@ func (h *handlers) LogsHandler(w http.ResponseWriter, r *http.Request) {
 func (h *handlers) getLogs(key string) []LogLine {
 	lines, err := h.loggers.Get(key).GetLogs()
 	if err != nil {
-		return []LogLine{LogLine{Message: fmt.Sprintf("error getting logger: %s", err.Error())}}
+		return []LogLine{{Message: fmt.Sprintf("error getting logger: %s", err.Error())}}
 	}
 
 	var logLines []LogLine = []LogLine{}
