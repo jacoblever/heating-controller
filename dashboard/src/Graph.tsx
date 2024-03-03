@@ -35,7 +35,7 @@ export function Graph() {
                     datasets: [
                         {
                             label: `Dining Room`,
-                            data: data.Temperature.map((p) => {
+                            data: (data.Temperature ?? []).map((p) => {
                                 return { x: p.Time, y: p.Value }
                             }),
                             borderColor: 'rgba(75, 192, 192, 1)',
@@ -45,7 +45,7 @@ export function Graph() {
                         },
                         {
                             label: `Bedroom`,
-                            data: data.Temperature1.map((p) => {
+                            data: (data.Temperature1 ?? []).map((p) => {
                                 return { x: p.Time, y: p.Value }
                             }),
                             borderColor: 'yellow',
@@ -55,7 +55,7 @@ export function Graph() {
                         },
                         {
                             label: `Lounge`,
-                            data: data.Temperature2.map((p) => {
+                            data: (data.Temperature2 ?? []).map((p) => {
                                 return { x: p.Time, y: p.Value }
                             }),
                             borderColor: 'orange',
@@ -65,7 +65,7 @@ export function Graph() {
                         },
                         {
                             label: 'Boiler State',
-                            data: data.BoilerState.map((p) => {
+                            data: (data.BoilerState ?? []).map((p) => {
                                 return { x: p.Time, y: p.Value }
                             }),
                             borderColor: ['rgba(255, 99, 132, 1)'], //red

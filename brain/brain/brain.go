@@ -311,6 +311,10 @@ func (h *handlers) getData(filePath string, parseValue func(v string) (float64, 
 				log.Printf("failed to parse value in '%s' in %s", line, filePath)
 				continue
 			}
+			if t.Before(time.Now().Add(-7 * 24 * time.Hour)) {
+				// Ignore logs from more than a week ago
+				continue
+			}
 			output = append(output, TimePoint{
 				Time:  t.UnixMilli(),
 				Value: value,
