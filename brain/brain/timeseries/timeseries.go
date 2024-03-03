@@ -1,6 +1,7 @@
 package timeseries
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -16,6 +17,19 @@ func Append(filePath string, clock clock.Clock, value string, onlyEvery *time.Du
 		return fileio.AppendLineToFile(filePath, line)
 	}
 	return nil
+}
+
+func ReadLastRecord(filePath string) ([]string, error) {
+	line, err := fileio.ReadLastLine(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if line == "" {
+		return nil, fmt.Errorf("no last record in %s", filePath)
+	}
+	parts := strings.Split(line, ",")
+	return parts[1:], nil
 }
 
 func shouldAppend(filePath string, clock clock.Clock, onlyEvery *time.Duration) bool {

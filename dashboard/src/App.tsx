@@ -6,7 +6,8 @@ import { Logs } from './Logs';
 
 type BrainState = {
   PollDelayMs: number;
-  BoilerState: string;
+  StateOfBoiler: string;
+  CalculatedBoilerState: string;
   SmartSwitchOn: boolean;
   TemperatureCelsius: number;
   ThermostatThresholdCelsius: number;
@@ -83,7 +84,10 @@ function App() {
       </header>
       <div>
         <div>
-          Boiler State: {brainState?.BoilerState}
+          State Of Boiler: {brainState?.StateOfBoiler}
+          {brainState?.StateOfBoiler !== brainState?.CalculatedBoilerState && (
+            <>(Will change to {brainState?.CalculatedBoilerState} on next update)</>
+          )}
         </div>
         <div>
           Smart Switch State: {brainState?.SmartSwitchOn ? "on" : "off"}

@@ -26,7 +26,6 @@ var DefaultConfig Config = Config{
 	TemperatureLog2FilePath:            "./temperature-log-2.txt",
 	CurrentThermostatThresholdFilePath: "./current-thermostat-threshold.txt",
 	SmartSwitchLastAliveFilePath:       "./smart-switch-last-alive.txt",
-	BoilerStateFilePath:                "./boiler-state.txt",
 	BoilerStateLogFilePath:             "./boiler-state-log.txt",
 	BoilerLogFilePath:                  "./boiler-log.txt",
 }
@@ -65,7 +64,6 @@ type Config struct {
 	TemperatureLog2FilePath            string
 	CurrentThermostatThresholdFilePath string
 	SmartSwitchLastAliveFilePath       string
-	BoilerStateFilePath                string
 	BoilerStateLogFilePath             string
 	BoilerLogFilePath                  string
 }
@@ -78,7 +76,6 @@ func (c Config) AllFilePaths() []string {
 		c.TemperatureLog2FilePath,
 		c.CurrentThermostatThresholdFilePath,
 		c.SmartSwitchLastAliveFilePath,
-		c.BoilerStateFilePath,
 		c.BoilerStateLogFilePath,
 		c.BoilerLogFilePath,
 	}
@@ -143,7 +140,8 @@ func (h handlers) getTemperatureLogFilePath(id string) (string, error) {
 type UpdateThermostatResponse struct {
 	// PollDelayMs is the number of milliseconds the Arduino should wait before making another request
 	PollDelayMs                int
-	BoilerState                string
+	StateOfBoiler              string
+	CalculatedBoilerState      string
 	SmartSwitchOn              bool
 	TemperatureCelsius         float64
 	ThermostatThresholdCelsius float64
@@ -165,7 +163,8 @@ func (h handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request
 
 	response := UpdateThermostatResponse{
 		PollDelayMs:                1000,
-		BoilerState:                boilerState,
+		StateOfBoiler:              boilerState.stateOfBoiler,
+		CalculatedBoilerState:      boilerState.calculatedBoilerState,
 		SmartSwitchOn:              h.getSmartSwitchStatus(),
 		TemperatureCelsius:         h.getTemperature(),
 		ThermostatThresholdCelsius: h.getThermostat(),
@@ -197,7 +196,7 @@ func (h *handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := BoilerStateResponse{
 		PollDelayMs:   1000,
-		BoilerState:   boilerState,
+		BoilerState:   boilerState.calculatedBoilerState,
 		MotorSpeedRPM: 4,
 		StepsToTurn:   boilerSwitchStepCount,
 		Command:       h.getNextBoilerCommand(),
@@ -356,16 +355,25 @@ func (h *handlers) getLogs(key string) []LogLine {
 	return logLines
 }
 
-func (h handlers) getBoilerState(logChange bool) string {
+type BoilerState struct {
+	stateOfBoiler         string
+	calculatedBoilerState string
+}
+
+func (h handlers) getBoilerState(logChange bool) BoilerState {
 	currentTemperature := h.getTemperature()
 	thermostatThreshold := h.getThermostat()
 	smartSwitchOn := h.getSmartSwitchStatus()
 
-	currentBoilerState, err := fileio.ReadFile(h.config.BoilerStateFilePath)
+	currentBoilerStateRecord, err := timeseries.ReadLastRecord(h.config.BoilerStateLogFilePath)
 	if err != nil {
-		h.loggers.Get("brain").Logf("error reading boiler state: %s", err)
+		h.loggers.Get("brain").Logf("error reading current boiler state log: %s", err)
+		currentBoilerStateRecord = []string{""}
 	}
-	if currentBoilerState == "" {
+
+	currentBoilerState := currentBoilerStateRecord[0]
+
+	if currentBoilerState != "on" && currentBoilerState != "off" {
 		currentBoilerState = "off"
 	}
 
@@ -379,11 +387,6 @@ func (h handlers) getBoilerState(logChange bool) string {
 		}
 	}
 
-	err = fileio.WriteToFile(h.config.BoilerStateFilePath, boilerState)
-	if err != nil {
-		h.loggers.Get("brain").Logf("error reading boiler state: %s", err)
-	}
-
 	if logChange {
 		if boilerState != currentBoilerState {
 			err := timeseries.Append(h.config.BoilerStateLogFilePath, h.clock, boilerState, nil)
@@ -395,10 +398,15 @@ func (h handlers) getBoilerState(logChange bool) string {
 				"boiler state changing from %s to %s (smartSwitchOn: %t, currentTemperature: %.2f, thermostatThreshold: %.2f)",
 				currentBoilerState, boilerState, smartSwitchOn, currentTemperature, thermostatThreshold,
 			)
+
+			currentBoilerState = boilerState
 		}
 	}
 
-	return boilerState
+	return BoilerState{
+		stateOfBoiler:         currentBoilerState,
+		calculatedBoilerState: boilerState,
+	}
 }
 
 func (h handlers) getSmartSwitchStatus() bool {
