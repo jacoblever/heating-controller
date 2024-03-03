@@ -12,11 +12,32 @@ type BrainState = {
   ThermostatThresholdCelsius: number;
 };
 
+enum ViewMode {
+  None = 0,
+  Graph,
+  Logs,
+  Advanced,
+}
+
+const viewModes = [ViewMode.Graph, ViewMode.Logs, ViewMode.Advanced];
+
+const getViewModeName = (mode: ViewMode): string => {
+  switch (mode) {
+    case ViewMode.Graph:
+      return "Graph";
+    case ViewMode.Logs:
+      return "Logs";
+    case ViewMode.Advanced:
+      return "Advanced";
+  }
+  return "";
+}
+
 function App() {
   const [brainState, setBrainState] = useState<BrainState | null>(null);
   const [thermostat, setThermostat] = useState<number | "">("");
   const [thermostatUpdated, setThermostatUpdated] = useState<boolean>(false);
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.None);
 
   const updateState = (setThermostatInput: boolean) => {
     var xmlHttp = new XMLHttpRequest();
@@ -89,12 +110,29 @@ function App() {
           {thermostatUpdated && (<span>Saved!</span>)}
         </div>
 
-        {!showAdvanced && <button onClick={() => setShowAdvanced(true)}>Show Advanced</button>}
-        {showAdvanced && <button onClick={() => setShowAdvanced(false)}>Close Advanced</button>}
-        {showAdvanced && <Advanced />}
+        {viewModes.map(m => {
+          if (viewMode === m) {
+            return <button className='App-button_mode' onClick={() => setViewMode(ViewMode.None)}>Hide {getViewModeName(m)}</button>;
+          } else {
+            return <button className='App-button_mode' onClick={() => setViewMode(m)}>Show {getViewModeName(m)}</button>;
+          }
+        })}
 
-        <Graph />
-        <Logs />
+        {viewMode !== ViewMode.None && (
+          <div className='App-div_view-mode-box'>
+            {viewMode === ViewMode.Graph && (
+              <Graph />
+            )}
+
+            {viewMode === ViewMode.Logs && (
+              <Logs />
+            )}
+
+            {viewMode === ViewMode.Advanced && (
+              <Advanced />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
