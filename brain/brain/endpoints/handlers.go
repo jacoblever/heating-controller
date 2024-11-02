@@ -11,20 +11,18 @@ import (
 )
 
 type Handlers struct {
-	config             boiler.Config
-	clock              clock.Clock
-	boilerCommandQueue []string
-	loggers            logging.Loggers
-	boiler             boiler.Boiler
+	config  boiler.Config
+	clock   clock.Clock
+	loggers logging.Loggers
+	boiler  boiler.Boiler
 }
 
 func MakeHandlers(config boiler.Config, clock clock.Clock, loggers logging.Loggers, boiler boiler.Boiler) Handlers {
 	return Handlers{
-		config:             config,
-		clock:              clock,
-		boilerCommandQueue: make([]string, 0),
-		loggers:            loggers,
-		boiler:             boiler,
+		config:  config,
+		clock:   clock,
+		loggers: loggers,
+		boiler:  boiler,
 	}
 }
 

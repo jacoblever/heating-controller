@@ -13,11 +13,11 @@ func (h *Handlers) TurnBoilerHandler(w http.ResponseWriter, r *http.Request) {
 	if command != "" {
 		switch command {
 		case "turn-clockwise":
-			h.boilerCommandQueue = append(h.boilerCommandQueue, fmt.Sprintf("%d", boilerSwitchStepCount))
+			h.boiler.BoilerCommandQueue.Add(fmt.Sprintf("%d", boilerSwitchStepCount))
 		case "turn-anticlockwise":
-			h.boilerCommandQueue = append(h.boilerCommandQueue, fmt.Sprintf("-%d", boilerSwitchStepCount))
+			h.boiler.BoilerCommandQueue.Add(fmt.Sprintf("-%d", boilerSwitchStepCount))
 		default:
-			h.boilerCommandQueue = append(h.boilerCommandQueue, command)
+			h.boiler.BoilerCommandQueue.Add(command)
 		}
 	}
 

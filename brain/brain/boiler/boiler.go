@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jacoblever/heating-controller/brain/brain/boiler/commandqueue"
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/fileio"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
@@ -18,6 +19,8 @@ type Boiler struct {
 	config  Config
 	clock   clock.Clock
 	loggers logging.Loggers
+
+	BoilerCommandQueue commandqueue.CommandQueue
 }
 
 func MakeBoiler(config Config, clock clock.Clock, loggers logging.Loggers) Boiler {
@@ -25,6 +28,8 @@ func MakeBoiler(config Config, clock clock.Clock, loggers logging.Loggers) Boile
 		config:  config,
 		clock:   clock,
 		loggers: loggers,
+
+		BoilerCommandQueue: commandqueue.Make(),
 	}
 }
 

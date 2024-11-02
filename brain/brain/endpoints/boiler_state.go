@@ -31,17 +31,7 @@ func (h *Handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 		BoilerState:   boilerState.CalculatedBoilerState,
 		MotorSpeedRPM: 4,
 		StepsToTurn:   boilerSwitchStepCount,
-		Command:       h.getNextBoilerCommand(),
+		Command:       h.boiler.BoilerCommandQueue.Pop(),
 	}
 	writeJSON(w, response)
-}
-
-func (h *Handlers) getNextBoilerCommand() string {
-	if len(h.boilerCommandQueue) == 0 {
-		return ""
-	}
-
-	command := h.boilerCommandQueue[0]
-	h.boilerCommandQueue = h.boilerCommandQueue[1:]
-	return command
 }
