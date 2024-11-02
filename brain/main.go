@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/jacoblever/heating-controller/brain/brain"
+	"github.com/jacoblever/heating-controller/brain/brain/boiler"
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
 )
@@ -16,7 +17,7 @@ func main() {
 	slackLogger := logging.CreateSlackLogger()
 	loggers := logging.InitLoggers(clock, slackLogger)
 
-	router := brain.CreateRouter(brain.DefaultConfig, clock, loggers)
+	router := brain.CreateRouter(boiler.DefaultConfig, clock, loggers)
 
 	fmt.Println(fmt.Sprintf("Listening on port %d...", port))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), router)

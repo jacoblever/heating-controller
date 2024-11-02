@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jacoblever/heating-controller/brain/brain"
+	"github.com/jacoblever/heating-controller/brain/brain/boiler"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
 	"github.com/jacoblever/heating-controller/brain/common"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ type Context struct {
 	context.Context
 
 	BrainRouter *http.ServeMux
-	Config      brain.Config
+	Config      boiler.Config
 	Clock       *common.FakeClock
 }
 
@@ -150,7 +151,7 @@ func (d Dashboard) TurnBoiler(t *testing.T, ctx Context, command string) (rawRes
 }
 
 func CreateTestContext(t *testing.T) Context {
-	config := brain.DefaultConfig
+	config := boiler.DefaultConfig
 	clock := common.FakeClock{TimeNow: time.Now()}
 	loggers := logging.InitLoggers(&clock, &logging.SystemOutLogger{})
 	router := brain.CreateRouter(config, &clock, loggers)
