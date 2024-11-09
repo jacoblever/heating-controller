@@ -2,6 +2,10 @@
 connect:
 	ssh brain@192.168.86.100
 
+.PHONY: start
+start:
+	npm start
+
 .PHONY: deploy
 deploy:
 	npm run build

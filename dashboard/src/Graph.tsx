@@ -10,10 +10,12 @@ type TimePoint = {
     Value: number
 }
 
-type GraphDatResponse = {
+type GraphDataResponse = {
     Temperature: TimePoint[]
     Temperature1: TimePoint[]
     Temperature2: TimePoint[]
+    Thermostat: TimePoint[]
+    SmartSwitchState: TimePoint[]
     BoilerState: TimePoint[]
 }
 
@@ -26,7 +28,7 @@ export function Graph() {
             xmlHttp.open("GET", "http://192.168.86.100:8080/graph-data/", false);
             xmlHttp.send(null);
             console.log(xmlHttp.responseText);
-            var data: GraphDatResponse = JSON.parse(xmlHttp.responseText);
+            var data: GraphDataResponse = JSON.parse(xmlHttp.responseText);
 
             let myChart = new Chart<"line", number[] | { x: number, y: number }[]>(chartContainer.current, {
                 type: 'line',
@@ -64,9 +66,32 @@ export function Graph() {
                             yAxisID: 'y1'
                         },
                         {
+                            label: `Thermostat`,
+                            data: (data.Thermostat ?? []).map((p) => {
+                                return { x: p.Time, y: p.Value }
+                            }),
+                            borderColor: 'gray',
+                            borderWidth: 1,
+                            stepped: true,
+                            fill: false,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Smart Switch State',
+                            data: (data.SmartSwitchState ?? []).map((p) => {
+                                return { x: p.Time, y: p.Value }
+                            }),
+                            borderColor: ['rgba(255, 99, 132, 1)'], //red
+                            borderWidth: 0.1,
+                            pointRadius: 0,
+                            stepped: true,
+                            fill: true,
+                            yAxisID: 'y2'
+                        },
+                        {
                             label: 'Boiler State',
                             data: (data.BoilerState ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value }
+                                return { x: p.Time, y: p.Value === 1 ? 0.5 : 0 }
                             }),
                             borderColor: ['rgba(255, 99, 132, 1)'], //red
                             borderWidth: 0.1,
@@ -100,15 +125,21 @@ export function Graph() {
                         zoom: {
                             pan: {
                                 enabled: true,
-                                modifierKey: 'ctrl',
+                                mode: 'x',
                             },
                             zoom: {
-                                drag: {
-                                    enabled: true
+                                wheel: {
+                                    enabled: true,
+                                },
+                                pinch: {
+                                    enabled: true,
                                 },
                                 mode: 'x',
                             },
                         },
+                    },
+                    interaction: {
+                        mode: 'x'
                     }
                 },
             });

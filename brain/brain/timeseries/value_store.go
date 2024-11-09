@@ -35,6 +35,13 @@ func (b OnOff) OnOffString() string {
 	return "off"
 }
 
+func (b OnOff) OneOrZero() float64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func (b OnOff) Bool() bool {
 	return bool(b)
 }
