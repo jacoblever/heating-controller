@@ -7,16 +7,18 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/endpoints"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
+	"github.com/jacoblever/heating-controller/brain/brain/stores"
 )
 
-func CreateRouter(config boiler.Config, c clock.Clock, loggers logging.Loggers) *http.ServeMux {
+func CreateRouter(config stores.Config, c clock.Clock, loggers logging.Loggers) *http.ServeMux {
 	router := http.NewServeMux()
 	if c == nil {
 		c = clock.CreateClock()
 	}
 
-	boiler := boiler.MakeBoiler(config, c, loggers)
-	handlers := endpoints.MakeHandlers(config, c, loggers, boiler)
+	stores := stores.MakeStores(c, config)
+	boiler := boiler.MakeBoiler(config, c, loggers, stores)
+	handlers := endpoints.MakeHandlers(config, c, loggers, stores, boiler)
 
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
 	router.HandleFunc("/temperature/", handlers.TemperatureHandler)

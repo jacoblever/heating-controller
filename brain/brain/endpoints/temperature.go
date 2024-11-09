@@ -3,7 +3,7 @@ package endpoints
 import (
 	"fmt"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/jacoblever/heating-controller/brain/brain/timeseries"
 )
@@ -17,14 +17,23 @@ func (h Handlers) TemperatureHandler(w http.ResponseWriter, r *http.Request) {
 	temperature := r.URL.Query().Get("temperature")
 	id := r.URL.Query().Get("id")
 
-	filePath, err := h.getTemperatureLogFilePath(id)
+	temperatureStore, err := h.getTemperatureStore(id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	every := 10 * time.Minute
-	timeseries.Append(filePath, h.clock, temperature, &every)
+	float, err := strconv.ParseFloat(temperature, 64)
+	if err != nil {
+		writeErrorWithStatus(w, fmt.Errorf("invalid temperature %s: %s", temperature, err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	err = temperatureStore.Store(float)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
 
 	response := TemperatureResponse{
 		PollDelayMs: 1000,
@@ -32,13 +41,13 @@ func (h Handlers) TemperatureHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, response)
 }
 
-func (h Handlers) getTemperatureLogFilePath(id string) (string, error) {
+func (h Handlers) getTemperatureStore(id string) (timeseries.ValueStore[float64], error) {
 	switch id {
 	case "1":
-		return h.config.TemperatureLog1FilePath, nil
+		return h.stores.Temperature1, nil
 	case "2":
-		return h.config.TemperatureLog2FilePath, nil
+		return h.stores.Temperature2, nil
 	default:
-		return "", fmt.Errorf("getTemperatureLogFilePath: unknown device id %s", id)
+		return nil, fmt.Errorf("getTemperatureLogFilePath: unknown device id %s", id)
 	}
 }

@@ -1,12 +1,14 @@
-package boiler
+package stores
 
 type Config struct {
 	CurrentTemperatureFilePath         string
 	TemperatureLogFilePath             string
 	TemperatureLog1FilePath            string
 	TemperatureLog2FilePath            string
-	CurrentThermostatThresholdFilePath string
+	CurrentThermostatThresholdFilePath string // remove
+	ThermostatThresholdLogFilePath     string
 	SmartSwitchLastAliveFilePath       string
+	SmartSwitchStateLogFilePath        string
 	BoilerStateLogFilePath             string
 	BoilerLogFilePath                  string
 }
@@ -17,7 +19,9 @@ var DefaultConfig Config = Config{
 	TemperatureLog1FilePath:            "./temperature-log-1.txt",
 	TemperatureLog2FilePath:            "./temperature-log-2.txt",
 	CurrentThermostatThresholdFilePath: "./current-thermostat-threshold.txt",
+	ThermostatThresholdLogFilePath:     "./thermostat-threshold-log.txt",
 	SmartSwitchLastAliveFilePath:       "./smart-switch-last-alive.txt",
+	SmartSwitchStateLogFilePath:        "./smart-switch-state-log.txt",
 	BoilerStateLogFilePath:             "./boiler-state-log.txt",
 	BoilerLogFilePath:                  "./boiler-log.txt",
 }
@@ -29,7 +33,9 @@ func (c Config) AllFilePaths() []string {
 		c.TemperatureLog1FilePath,
 		c.TemperatureLog2FilePath,
 		c.CurrentThermostatThresholdFilePath,
+		c.ThermostatThresholdLogFilePath,
 		c.SmartSwitchLastAliveFilePath,
+		c.SmartSwitchStateLogFilePath,
 		c.BoilerStateLogFilePath,
 		c.BoilerLogFilePath,
 	}

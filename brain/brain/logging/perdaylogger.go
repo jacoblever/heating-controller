@@ -79,10 +79,12 @@ func (l PerDayLogger) append(message string) error {
 		return err
 	}
 
-	err := timeseries.Append(dayFileName, l.Clock, message, nil)
+	store := timeseries.MakeStringValueStore(l.Clock, dayFileName, false, nil)
+	err := store.Store(message)
 	if err != nil {
 		return err
 	}
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/jacoblever/heating-controller/brain/brain"
-	"github.com/jacoblever/heating-controller/brain/brain/boiler"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
+	"github.com/jacoblever/heating-controller/brain/brain/stores"
 	"github.com/jacoblever/heating-controller/brain/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +22,7 @@ type Context struct {
 	context.Context
 
 	BrainRouter *http.ServeMux
-	Config      boiler.Config
+	Config      stores.Config
 	Clock       *common.FakeClock
 }
 
@@ -66,7 +66,7 @@ func (b *Boiler) BoilerState(t *testing.T, ctx Context) (rawResponse *httptest.R
 		t.Errorf("failed to create reqeust: %s", err)
 	}
 	response, model := SendTestRequestJSON(ctx.BrainRouter, request)
-	assert.Equal(t, http.StatusOK, response.Code)
+	assertOK(t, response, model)
 
 	newBoilerState := model["BoilerState"].(string)
 	stepsToTurn := model["StepsToTurn"].(float64)
@@ -151,9 +151,10 @@ func (d Dashboard) TurnBoiler(t *testing.T, ctx Context, command string) (rawRes
 }
 
 func CreateTestContext(t *testing.T) Context {
-	config := boiler.DefaultConfig
+	config := stores.DefaultConfig
 	clock := common.FakeClock{TimeNow: time.Now()}
 	loggers := logging.InitLoggers(&clock, &logging.SystemOutLogger{})
+	deleteAllFiles(config, loggers) // clean up any old tests
 	router := brain.CreateRouter(config, &clock, loggers)
 	ctx := Context{
 		Context:     context.Background(),
@@ -163,12 +164,16 @@ func CreateTestContext(t *testing.T) Context {
 	}
 
 	t.Cleanup(func() {
-		for _, f := range config.AllFilePaths() {
-			_ = os.Remove(f)
-		}
-		loggers.CleanUpAnyLogs()
+		deleteAllFiles(config, loggers)
 	})
 	return ctx
+}
+
+func deleteAllFiles(config stores.Config, loggers logging.Loggers) {
+	for _, f := range config.AllFilePaths() {
+		_ = os.Remove(f)
+	}
+	loggers.CleanUpAnyLogs()
 }
 
 func SendTestRequestJSON(router *http.ServeMux, req *http.Request) (rawResponse *httptest.ResponseRecorder, responseModel map[string]interface{}) {
@@ -177,4 +182,8 @@ func SendTestRequestJSON(router *http.ServeMux, req *http.Request) (rawResponse 
 	responseModel = nil
 	_ = json.Unmarshal(rawResponse.Body.Bytes(), &responseModel)
 	return rawResponse, responseModel
+}
+
+func assertOK(t *testing.T, rawResponse *httptest.ResponseRecorder, responseModel map[string]interface{}) {
+	assert.Equal(t, http.StatusOK, rawResponse.Code, responseModel)
 }

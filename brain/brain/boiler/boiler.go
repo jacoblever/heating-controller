@@ -9,25 +9,27 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/fileio"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
+	"github.com/jacoblever/heating-controller/brain/brain/stores"
 	"github.com/jacoblever/heating-controller/brain/brain/timeseries"
 )
 
 var debounceBuffer = 0.5
-var defaultThermostatThreshold float64 = 18
 
 type Boiler struct {
-	config  Config
+	config  stores.Config
 	clock   clock.Clock
 	loggers logging.Loggers
+	stores  stores.Stores
 
 	BoilerCommandQueue commandqueue.CommandQueue
 }
 
-func MakeBoiler(config Config, clock clock.Clock, loggers logging.Loggers) Boiler {
+func MakeBoiler(config stores.Config, clock clock.Clock, loggers logging.Loggers, stores stores.Stores) Boiler {
 	return Boiler{
 		config:  config,
 		clock:   clock,
 		loggers: loggers,
+		stores:  stores,
 
 		BoilerCommandQueue: commandqueue.Make(),
 	}
@@ -40,36 +42,32 @@ type BoilerState struct {
 
 func (b Boiler) GetBoilerState(logChange bool) BoilerState {
 	currentTemperature := b.GetTemperature()
-	thermostatThreshold := b.GetThermostat()
+	thermostatThreshold := b.stores.Thermostat.GetLatestValueOrDefault()
 	smartSwitchOn := b.GetSmartSwitchStatus()
 
-	currentBoilerStateRecord, err := timeseries.ReadLastRecord(b.config.BoilerStateLogFilePath)
+	currentBoilerStateRecord, err := b.stores.BoilerState.GetLatestValue()
 	if err != nil {
 		b.loggers.Get("brain").Logf("error reading current boiler state log: %s", err)
-		currentBoilerStateRecord = []string{""}
+		currentBoilerStateRecord = timeseries.Value[timeseries.OnOff]{}
 	}
 
-	currentBoilerState := currentBoilerStateRecord[0]
+	currentBoilerState := currentBoilerStateRecord.Value()
 
-	if currentBoilerState != "on" && currentBoilerState != "off" {
-		currentBoilerState = "off"
-	}
-
-	boilerState := "off"
+	boilerState := timeseries.Off
 	if smartSwitchOn {
-		if currentBoilerState == "off" && currentTemperature < thermostatThreshold-debounceBuffer {
-			boilerState = "on"
+		if currentBoilerState == timeseries.Off && currentTemperature < thermostatThreshold-debounceBuffer {
+			boilerState = timeseries.On
 		}
-		if currentBoilerState == "on" && currentTemperature < thermostatThreshold {
-			boilerState = "on"
+		if currentBoilerState == timeseries.On && currentTemperature < thermostatThreshold {
+			boilerState = timeseries.On
 		}
 	}
 
 	if logChange {
 		if boilerState != currentBoilerState {
-			err := timeseries.Append(b.config.BoilerStateLogFilePath, b.clock, boilerState, nil)
+			err := b.stores.BoilerState.Store(boilerState)
 			if err != nil {
-				b.loggers.Get("brain").Logf("error reading boiler state: %s", err)
+				b.loggers.Get("brain").Logf("error writing boiler state: %s", err)
 			}
 
 			b.loggers.Get("brain").Logf(
@@ -82,12 +80,12 @@ func (b Boiler) GetBoilerState(logChange bool) BoilerState {
 	}
 
 	return BoilerState{
-		StateOfBoiler:         currentBoilerState,
-		CalculatedBoilerState: boilerState,
+		StateOfBoiler:         currentBoilerState.OnOffString(),
+		CalculatedBoilerState: boilerState.OnOffString(),
 	}
 }
 
-func (b Boiler) GetSmartSwitchStatus() bool {
+func (b Boiler) GetSmartSwitchStatus() timeseries.OnOff {
 	currentTime := b.clock.Now()
 
 	timeValue, err := fileio.ReadFile(b.config.SmartSwitchLastAliveFilePath)
@@ -96,21 +94,12 @@ func (b Boiler) GetSmartSwitchStatus() bool {
 	}
 
 	lastAliveTime, err := time.Parse(time.RFC3339, timeValue)
-	smartSwitchOn := currentTime.Sub(lastAliveTime) < 6*time.Second
+	smartSwitchOn := timeseries.OnOff(currentTime.Sub(lastAliveTime) < 6*time.Second)
+	err = b.stores.SmartSwitch.Store(smartSwitchOn)
+	if err != nil {
+		b.loggers.Get("brain").Logf("failed to write smart switch state '%b': %s", smartSwitchOn, err.Error())
+	}
 	return smartSwitchOn
-}
-
-func (b Boiler) GetThermostat() float64 {
-	thermostatThresholdValue, err := fileio.ReadFile(b.config.CurrentThermostatThresholdFilePath)
-	if err != nil {
-		return defaultThermostatThreshold
-	}
-
-	thermostatThreshold, err := strconv.ParseFloat(thermostatThresholdValue, 64)
-	if err != nil {
-		return defaultThermostatThreshold
-	}
-	return thermostatThreshold
 }
 
 func (b Boiler) GetTemperature() float64 {

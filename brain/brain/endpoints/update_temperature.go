@@ -1,11 +1,11 @@
 package endpoints
 
 import (
+	"fmt"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/jacoblever/heating-controller/brain/brain/fileio"
-	"github.com/jacoblever/heating-controller/brain/brain/timeseries"
 )
 
 type UpdateTemperatureResponse struct {
@@ -16,15 +16,23 @@ type UpdateTemperatureResponse struct {
 
 func (h Handlers) UpdateTemperatureHandler(w http.ResponseWriter, r *http.Request) {
 	temperature := r.URL.Query().Get("temperature")
+	float, err := strconv.ParseFloat(temperature, 64)
+	if err != nil {
+		writeErrorWithStatus(w, fmt.Errorf("invalid temperature %s: %s", temperature, err.Error()), http.StatusBadRequest)
+		return
+	}
 
 	fileio.WriteToFile(h.config.CurrentTemperatureFilePath, temperature)
 
-	every := 10 * time.Minute
-	timeseries.Append(h.config.TemperatureLogFilePath, h.clock, temperature, &every)
+	err = h.stores.Temperature.Store(float)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
 
 	response := UpdateTemperatureResponse{
 		PollDelayMs:                1000,
-		ThermostatThresholdCelsius: h.boiler.GetThermostat(),
+		ThermostatThresholdCelsius: h.stores.Thermostat.GetLatestValueOrDefault(),
 	}
 	writeJSON(w, response)
 }

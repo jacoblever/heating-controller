@@ -22,7 +22,7 @@ func TestTempLog(t *testing.T) {
 
 	t.Run("the temperature is recorded in the log", func(t *testing.T) {
 		c := readFile(t, ctx.Config.TemperatureLogFilePath)
-		assert.Equal(t, "\n2020-03-26T19:00:00+01:00,17.300000", c)
+		assert.Equal(t, "\n2020-03-26T19:00:00+01:00,17.3", c)
 	})
 
 	ctx.Clock.Advance(t, "1m")
@@ -34,7 +34,7 @@ func TestTempLog(t *testing.T) {
 
 	t.Run("the temperature is not recorded", func(t *testing.T) {
 		c := readFile(t, ctx.Config.TemperatureLogFilePath)
-		assert.Equal(t, "\n2020-03-26T19:00:00+01:00,17.300000", c)
+		assert.Equal(t, "\n2020-03-26T19:00:00+01:00,17.3", c)
 	})
 
 	ctx.Clock.Advance(t, "10m")
@@ -46,7 +46,7 @@ func TestTempLog(t *testing.T) {
 
 	t.Run("the temperature is not recorded in the log", func(t *testing.T) {
 		c := readFile(t, ctx.Config.TemperatureLogFilePath)
-		assert.Equal(t, "\n2020-03-26T19:00:00+01:00,17.300000\n2020-03-26T19:11:00+01:00,18.200000", c)
+		assert.Equal(t, "\n2020-03-26T19:00:00+01:00,17.3\n2020-03-26T19:11:00+01:00,18.2", c)
 	})
 }
 
