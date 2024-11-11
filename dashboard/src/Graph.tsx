@@ -1,7 +1,8 @@
 import Chart from 'chart.js/auto';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-date-fns';
+import './Graph.css';
 
 Chart.register(zoomPlugin);
 
@@ -19,13 +20,45 @@ type GraphDataResponse = {
     BoilerState: TimePoint[]
 }
 
+const temperatureLine = (label: string, data: TimePoint[], color: string, stepped: boolean = false) => {
+    return {
+        label: label,
+        data: (data ?? []).map((p) => {
+            return { x: p.Time, y: p.Value }
+        }),
+        borderColor: color,
+        borderWidth: 1,
+        stepped: stepped,
+        fill: false,
+        yAxisID: 'y1',
+    }
+}
+
+const onOffSwitch = (label: string, data: TimePoint[], color: string) => {
+    return {
+        label: label,
+        data: (data ?? []).map((p) => {
+            return { x: p.Time, y: p.Value }
+        }),
+        borderColor: [color],
+        backgroundColor: color,
+        borderWidth: 0.1,
+        pointRadius: 0,
+        stepped: true,
+        fill: true,
+        yAxisID: 'y2'
+    }
+}
+
 export function Graph() {
     const chartContainer = useRef<HTMLCanvasElement>(null);
+    const graphContainer = useRef<HTMLDivElement>(null);
+    const [days, setDays] = useState(7)
 
     useEffect(() => {
         if (chartContainer.current) {
             let xmlHttp = new XMLHttpRequest();
-            xmlHttp.open("GET", "http://192.168.86.100:8080/graph-data/", false);
+            xmlHttp.open("GET", "http://192.168.86.100:8080/graph-data/?days=" + days, false);
             xmlHttp.send(null);
             console.log(xmlHttp.responseText);
             var data: GraphDataResponse = JSON.parse(xmlHttp.responseText);
@@ -35,74 +68,16 @@ export function Graph() {
                 data: {
                     labels: data.Temperature.map((p => p.Time)),
                     datasets: [
-                        {
-                            label: `Dining Room`,
-                            data: (data.Temperature ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value }
-                            }),
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                            fill: false,
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: `Bedroom`,
-                            data: (data.Temperature1 ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value }
-                            }),
-                            borderColor: 'yellow',
-                            borderWidth: 1,
-                            fill: false,
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: `Lounge`,
-                            data: (data.Temperature2 ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value }
-                            }),
-                            borderColor: 'orange',
-                            borderWidth: 1,
-                            fill: false,
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: `Thermostat`,
-                            data: (data.Thermostat ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value }
-                            }),
-                            borderColor: 'gray',
-                            borderWidth: 1,
-                            stepped: true,
-                            fill: false,
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: 'Smart Switch State',
-                            data: (data.SmartSwitchState ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value }
-                            }),
-                            borderColor: ['rgba(255, 99, 132, 1)'], //red
-                            borderWidth: 0.1,
-                            pointRadius: 0,
-                            stepped: true,
-                            fill: true,
-                            yAxisID: 'y2'
-                        },
-                        {
-                            label: 'Boiler State',
-                            data: (data.BoilerState ?? []).map((p) => {
-                                return { x: p.Time, y: p.Value === 1 ? 0.5 : 0 }
-                            }),
-                            borderColor: ['rgba(255, 99, 132, 1)'], //red
-                            borderWidth: 0.1,
-                            pointRadius: 0,
-                            stepped: true,
-                            fill: true,
-                            yAxisID: 'y2'
-                        },
+                        temperatureLine('Dining Room', data.Temperature, 'rgba(75, 192, 192, 1)'),
+                        temperatureLine('Bedroom', data.Temperature1, 'yellow'),
+                        temperatureLine('Lounge', data.Temperature2, 'orange'),
+                        temperatureLine('Thermostat', data.Thermostat, 'gray', true),
+                        onOffSwitch('Boiler On', data.BoilerState, 'rgba(255, 50, 50, 1)'), // red
+                        onOffSwitch('Smart Switch On', data.SmartSwitchState, 'rgba(0, 0, 255, 0.25)'), // blue
                     ],
                 },
                 options: {
+                    maintainAspectRatio: false,
                     scales: {
                         x: {
                             type: "time",
@@ -134,6 +109,10 @@ export function Graph() {
                                 pinch: {
                                     enabled: true,
                                 },
+                                drag: {
+                                    enabled: true,
+                                    modifierKey: 'shift',
+                                },
                                 mode: 'x',
                             },
                         },
@@ -147,9 +126,30 @@ export function Graph() {
                 myChart.destroy();
             };
         }
-    }, []);
+    }, [days]);
 
-    return (<div>
+    const toggleFullScreen = () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen()
+        } else {
+            graphContainer.current && graphContainer.current.requestFullscreen()
+        }
+    }
+
+    return (<div className='graph' ref={graphContainer}>
+        {timePeriodButton("1 day", 1)}
+        {" - "}
+        {timePeriodButton("7 days", 7)}
+        {" - "}
+        {timePeriodButton("1 month", 31)}
+        {" - "}
+        {timePeriodButton("6 months", 6 * 31)}
+        {" --- "}
+        <button onClick={() => toggleFullScreen()}>Fullscreen</button>
         <canvas ref={chartContainer} style={{ maxWidth: '2000px', maxHeight: '500px' }}></canvas>
     </div>);
+
+    function timePeriodButton(label: string, desiredDays: number) {
+        return <button onClick={() => setDays(desiredDays)} disabled={days === desiredDays}>{label}</button>;
+    }
 }

@@ -1,0 +1,10 @@
+.graph {
+  background-color: white;
+  height: 450px;
+  padding-bottom: 50px;
+}
+
+.graph:fullscreen {
+  padding: 40px;
+  padding-top: 150px;
+}

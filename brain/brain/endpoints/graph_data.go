@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/jacoblever/heating-controller/brain/brain/timeseries"
 )
@@ -24,26 +25,31 @@ func (h *Handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 
-	seven := 7
-	temperatureData, err := h.getFloatData(h.stores.Temperature, seven)
+	days, err := strconv.Atoi(r.URL.Query().Get("days"))
+	if err != nil {
+		writeErrorWithStatus(w, err, http.StatusBadRequest)
+		return
+	}
+
+	temperatureData, err := h.getFloatData(h.stores.Temperature, days)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
-	temperature1Data, err := h.getFloatData(h.stores.Temperature1, seven)
+	temperature1Data, err := h.getFloatData(h.stores.Temperature1, days)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
-	temperature2Data, err := h.getFloatData(h.stores.Temperature2, seven)
+	temperature2Data, err := h.getFloatData(h.stores.Temperature2, days)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
-	thermostatData, err := h.getFloatData(h.stores.Thermostat, seven)
+	thermostatData, err := h.getFloatData(h.stores.Thermostat, days)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -54,13 +60,13 @@ func (h *Handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
 		Value: h.stores.Thermostat.GetLatestValueOrDefault(),
 	})
 
-	smartSwitchData, err := h.getOnOffData(h.stores.SmartSwitch, seven)
+	smartSwitchData, err := h.getOnOffData(h.stores.SmartSwitch, days)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
-	boilerStateData, err := h.getOnOffData(h.stores.BoilerState, seven)
+	boilerStateData, err := h.getOnOffData(h.stores.BoilerState, days)
 	if err != nil {
 		writeError(w, err)
 		return
