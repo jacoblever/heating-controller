@@ -30,7 +30,26 @@ type Store struct {
 }
 
 func (s Store) Store(value string) error {
+	return s.StoreLazy(func() (string, error) {
+		return value, nil
+	})
+}
+
+func (s Store) StoreLazy(valueGetter func() (string, error)) error {
 	lastValue, err := s.GetLatestValue()
+	if err != nil {
+		return err
+	}
+
+	timestampToWrite := Value[string]{
+		timestamp: s.clock.Now(),
+	}
+
+	if !s.shouldStore(lastValue, timestampToWrite) {
+		return nil
+	}
+
+	value, err := valueGetter()
 	if err != nil {
 		return err
 	}

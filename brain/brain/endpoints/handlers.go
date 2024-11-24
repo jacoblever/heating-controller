@@ -9,23 +9,26 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain/clock"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
 	"github.com/jacoblever/heating-controller/brain/brain/stores"
+	"github.com/jacoblever/heating-controller/brain/brain/weatherapi"
 )
 
 type Handlers struct {
-	config  stores.Config
-	clock   clock.Clock
-	loggers logging.Loggers
-	stores  stores.Stores
-	boiler  boiler.Boiler
+	config     stores.Config
+	clock      clock.Clock
+	loggers    logging.Loggers
+	stores     stores.Stores
+	boiler     boiler.Boiler
+	weatherAPI weatherapi.API
 }
 
-func MakeHandlers(config stores.Config, clock clock.Clock, loggers logging.Loggers, stores stores.Stores, boiler boiler.Boiler) Handlers {
+func MakeHandlers(config stores.Config, clock clock.Clock, loggers logging.Loggers, stores stores.Stores, boiler boiler.Boiler, weatherAPI weatherapi.API) Handlers {
 	return Handlers{
-		config:  config,
-		clock:   clock,
-		loggers: loggers,
-		stores:  stores,
-		boiler:  boiler,
+		config:     config,
+		clock:      clock,
+		loggers:    loggers,
+		stores:     stores,
+		boiler:     boiler,
+		weatherAPI: weatherAPI,
 	}
 }
 

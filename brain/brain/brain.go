@@ -8,9 +8,10 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain/endpoints"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
 	"github.com/jacoblever/heating-controller/brain/brain/stores"
+	"github.com/jacoblever/heating-controller/brain/brain/weatherapi"
 )
 
-func CreateRouter(config stores.Config, c clock.Clock, loggers logging.Loggers) *http.ServeMux {
+func CreateRouter(config stores.Config, c clock.Clock, loggers logging.Loggers, weatherAPI weatherapi.API) *http.ServeMux {
 	router := http.NewServeMux()
 	if c == nil {
 		c = clock.CreateClock()
@@ -18,7 +19,7 @@ func CreateRouter(config stores.Config, c clock.Clock, loggers logging.Loggers) 
 
 	stores := stores.MakeStores(c, config)
 	boiler := boiler.MakeBoiler(config, c, loggers, stores)
-	handlers := endpoints.MakeHandlers(config, c, loggers, stores, boiler)
+	handlers := endpoints.MakeHandlers(config, c, loggers, stores, boiler, weatherAPI)
 
 	router.HandleFunc("/update-temperature/", handlers.UpdateTemperatureHandler)
 	router.HandleFunc("/temperature/", handlers.TemperatureHandler)

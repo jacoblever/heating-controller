@@ -14,6 +14,7 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain"
 	"github.com/jacoblever/heating-controller/brain/brain/logging"
 	"github.com/jacoblever/heating-controller/brain/brain/stores"
+	"github.com/jacoblever/heating-controller/brain/brain/weatherapi"
 	"github.com/jacoblever/heating-controller/brain/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -155,7 +156,9 @@ func CreateTestContext(t *testing.T) Context {
 	clock := common.FakeClock{TimeNow: time.Now()}
 	loggers := logging.InitLoggers(&clock, &logging.SystemOutLogger{})
 	deleteAllFiles(config, loggers) // clean up any old tests
-	router := brain.CreateRouter(config, &clock, loggers)
+	fakeWeatherAPI := weatherapi.MakeFakeAPI()
+
+	router := brain.CreateRouter(config, &clock, loggers, fakeWeatherAPI)
 	ctx := Context{
 		Context:     context.Background(),
 		BrainRouter: router,

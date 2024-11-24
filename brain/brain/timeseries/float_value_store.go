@@ -30,6 +30,17 @@ func (s FloatStore) Store(value float64) error {
 	return s.store.Store(strconv.FormatFloat(value, 'f', -1, 64))
 }
 
+func (s FloatStore) StoreLazy(valueGetter func() (float64, error)) error {
+	return s.store.StoreLazy(func() (string, error) {
+		value, err := valueGetter()
+		if err != nil {
+			return "", err
+		}
+
+		return strconv.FormatFloat(value, 'f', -1, 64), nil
+	})
+}
+
 func (s FloatStore) GetLatestValue() (Value[float64], error) {
 	stringValue, err := s.store.GetLatestValue()
 	if err != nil {

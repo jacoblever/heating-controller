@@ -28,6 +28,17 @@ func (s OnOffStore) Store(value OnOff) error {
 	return s.store.Store(value.OnOffString())
 }
 
+func (s OnOffStore) StoreLazy(valueGetter func() (OnOff, error)) error {
+	return s.store.StoreLazy(func() (string, error) {
+		value, err := valueGetter()
+		if err != nil {
+			return "", err
+		}
+
+		return value.OnOffString(), nil
+	})
+}
+
 func (s OnOffStore) GetLatestValue() (Value[OnOff], error) {
 	stringValue, err := s.store.GetLatestValue()
 	if err != nil {

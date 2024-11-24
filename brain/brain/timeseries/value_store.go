@@ -4,6 +4,8 @@ import "time"
 
 type ValueStore[T any] interface {
 	Store(value T) error
+	StoreLazy(valueGetter func() (T, error)) error
+
 	GetLatestValue() (Value[T], error)
 	GetLatestValueOrDefault() T
 	GetAll(lastXdaysOnly *int) ([]Value[T], error)

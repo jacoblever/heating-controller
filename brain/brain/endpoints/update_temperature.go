@@ -30,6 +30,19 @@ func (h Handlers) UpdateTemperatureHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	err = h.stores.OutsideTemperature.StoreLazy(func() (float64, error) {
+		h.loggers.Get("brain").Log("trying to get weather from weatherapi.com")
+		weatherData, err := h.weatherAPI.GetWeather("E17")
+		if err != nil {
+			return 0, err
+		}
+
+		return weatherData.Current.TempC, nil
+	})
+	if err != nil {
+		h.loggers.Get("brain").Logf("failed to get weather from weatherapi.com: %s", err.Error())
+	}
+
 	response := UpdateTemperatureResponse{
 		PollDelayMs:                1000,
 		ThermostatThresholdCelsius: h.stores.Thermostat.GetLatestValueOrDefault(),
