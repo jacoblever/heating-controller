@@ -18,6 +18,7 @@ type GraphDataResponse = {
     Thermostat: TimePoint[]
     SmartSwitchState: TimePoint[]
     BoilerState: TimePoint[]
+    OutsideTemperature: TimePoint[]
 }
 
 const temperatureLine = (label: string, data: TimePoint[], color: string, stepped: boolean = false) => {
@@ -72,6 +73,7 @@ export function Graph() {
                         temperatureLine('Bedroom', data.Temperature1, 'yellow'),
                         temperatureLine('Lounge', data.Temperature2, 'orange'),
                         temperatureLine('Thermostat', data.Thermostat, 'gray', true),
+                        temperatureLine('Outside Thermostat', data.OutsideTemperature, 'blue'),
                         onOffSwitch('Boiler On', data.BoilerState, 'rgba(255, 50, 50, 1)'), // red
                         onOffSwitch('Smart Switch On', data.SmartSwitchState, 'rgba(0, 0, 255, 0.25)'), // blue
                     ],

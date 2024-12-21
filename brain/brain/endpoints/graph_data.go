@@ -13,12 +13,13 @@ type TimePoint struct {
 }
 
 type GraphDatResponse struct {
-	Temperature      []TimePoint
-	Temperature1     []TimePoint
-	Temperature2     []TimePoint
-	Thermostat       []TimePoint
-	SmartSwitchState []TimePoint
-	BoilerState      []TimePoint
+	Temperature        []TimePoint
+	Temperature1       []TimePoint
+	Temperature2       []TimePoint
+	Thermostat         []TimePoint
+	SmartSwitchState   []TimePoint
+	BoilerState        []TimePoint
+	OutsideTemperature []TimePoint
 }
 
 func (h *Handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,13 +73,20 @@ func (h *Handlers) GraphDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	outsideTemperatureData, err := h.getFloatData(h.stores.OutsideTemperature, days)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
 	response := GraphDatResponse{
-		Temperature:      temperatureData,
-		Temperature1:     temperature1Data, // yellow
-		Temperature2:     temperature2Data, // orange
-		Thermostat:       thermostatData,
-		SmartSwitchState: smartSwitchData,
-		BoilerState:      boilerStateData,
+		Temperature:        temperatureData,
+		Temperature1:       temperature1Data, // yellow
+		Temperature2:       temperature2Data, // orange
+		Thermostat:         thermostatData,
+		SmartSwitchState:   smartSwitchData,
+		BoilerState:        boilerStateData,
+		OutsideTemperature: outsideTemperatureData,
 	}
 
 	writeJSON(w, response)
