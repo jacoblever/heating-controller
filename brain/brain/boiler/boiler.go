@@ -14,6 +14,7 @@ import (
 )
 
 var debounceBuffer = 0.5
+var smartSwitchOffTimeout = 10 * time.Second
 
 type Boiler struct {
 	config  stores.Config
@@ -94,7 +95,7 @@ func (b Boiler) GetSmartSwitchStatus() timeseries.OnOff {
 	}
 
 	lastAliveTime, err := time.Parse(time.RFC3339, timeValue)
-	smartSwitchOn := timeseries.OnOff(currentTime.Sub(lastAliveTime) < 6*time.Second)
+	smartSwitchOn := timeseries.OnOff(currentTime.Sub(lastAliveTime) < smartSwitchOffTimeout)
 	err = b.stores.SmartSwitch.Store(smartSwitchOn)
 	if err != nil {
 		b.loggers.Get("brain").Logf("failed to write smart switch state '%b': %s", smartSwitchOn, err.Error())
