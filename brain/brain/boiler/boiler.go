@@ -14,7 +14,7 @@ import (
 )
 
 var debounceBuffer = 0.5
-var smartSwitchOffTimeout = 10 * time.Second
+var smartSwitchOffTimeout = 20 * time.Second
 
 type Boiler struct {
 	config  stores.Config
