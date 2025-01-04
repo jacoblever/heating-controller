@@ -43,7 +43,7 @@ const onOffSwitch = (label: string, data: TimePoint[], color: string) => {
         }),
         borderColor: [color],
         backgroundColor: color,
-        borderWidth: 0.1,
+        borderWidth: 2,
         pointRadius: 0,
         stepped: true,
         fill: true,
