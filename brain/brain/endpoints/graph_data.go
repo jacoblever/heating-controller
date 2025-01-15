@@ -123,5 +123,12 @@ func (h *Handlers) getOnOffData(store timeseries.ValueStore[timeseries.OnOff], l
 		})
 	}
 
+	if timePoints[len(timePoints)-1].Value == timeseries.On.OneOrZero() {
+		timePoints = append(timePoints, TimePoint{
+			Time:  h.clock.Now().UnixMilli(),
+			Value: timeseries.Off.OneOrZero(),
+		})
+	}
+
 	return timePoints, nil
 }
