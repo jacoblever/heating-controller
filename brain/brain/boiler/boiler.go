@@ -13,8 +13,8 @@ import (
 	"github.com/jacoblever/heating-controller/brain/brain/timeseries"
 )
 
-var debounceBuffer = 0.5
-var smartSwitchOffTimeout = 20 * time.Second
+var debounceBuffer = 0.25
+var smartSwitchOffTimeout = 60 * time.Second
 
 type Boiler struct {
 	config  stores.Config

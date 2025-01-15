@@ -38,8 +38,8 @@ func TestNoOscillation(t *testing.T) {
 		assert.Equal(t, "off", home.Boiler.State)
 	})
 
-	t.Run("when the house gets close to 0.5 below the target temperature the boiler should stay off", func(t *testing.T) {
-		_, _ = home.Thermometer.UpdateTemperature(t, ctx, 19.8)
+	t.Run("when the house gets close to 0.25 below the target temperature the boiler should stay off", func(t *testing.T) {
+		_, _ = home.Thermometer.UpdateTemperature(t, ctx, 20.0)
 		_, _ = home.Boiler.BoilerState(t, ctx)
 		assert.Equal(t, "off", home.Boiler.State)
 	})
