@@ -9,3 +9,5 @@ brain/.env
 
 # Build files
 bin
+
+past-outside-temp/**
