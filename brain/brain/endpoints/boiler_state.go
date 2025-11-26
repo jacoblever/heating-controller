@@ -2,7 +2,8 @@ package endpoints
 
 import "net/http"
 
-var boilerSwitchStepCount = 250
+var boilerSwitchStepCountOn = 300
+var boilerSwitchStepCountOff = 250
 
 type BoilerStateResponse struct {
 	// PollDelayMs is the number of milliseconds the Arduino should wait before making another request
@@ -26,11 +27,16 @@ func (h *Handlers) BoilerStateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	steps := boilerSwitchStepCountOn
+	if boilerState.CalculatedBoilerState == "off" {
+		steps = boilerSwitchStepCountOff
+	}
+
 	response := BoilerStateResponse{
 		PollDelayMs:   1000,
 		BoilerState:   boilerState.CalculatedBoilerState,
 		MotorSpeedRPM: 4,
-		StepsToTurn:   boilerSwitchStepCount,
+		StepsToTurn:   steps,
 		Command:       h.boiler.BoilerCommandQueue.Pop(),
 	}
 	writeJSON(w, response)

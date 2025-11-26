@@ -11,6 +11,7 @@ type BrainState = {
   SmartSwitchOn: boolean;
   TemperatureCelsius: number;
   ThermostatThresholdCelsius: number;
+  BoilerMode: string;
 };
 
 enum ViewMode {
@@ -37,6 +38,7 @@ const getViewModeName = (mode: ViewMode): string => {
 function App() {
   const [brainState, setBrainState] = useState<BrainState | null>(null);
   const [thermostat, setThermostat] = useState<number | "">("");
+  const [boilerMode, setBoilerMode] = useState<string>("");
   const [thermostatUpdated, setThermostatUpdated] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.None);
 
@@ -49,7 +51,8 @@ function App() {
     setBrainState(data);
     if (setThermostatInput) {
       // TODO: Deal with what happens if another user changes the thermostat while the page is open
-      setThermostat(data.ThermostatThresholdCelsius)
+      setThermostat(data.ThermostatThresholdCelsius);
+      setBoilerMode(data.BoilerMode)
     }
     setTimeout(() => updateState(false), data.PollDelayMs);
   }
@@ -66,7 +69,7 @@ function App() {
 
   function setNewThermostatValue(): void {
     var xmlHttp = new XMLHttpRequest();
-    xmlHttp.open("GET", "http://192.168.86.100:8080/update-thermostat/?threshold=" + thermostat, false);
+    xmlHttp.open("GET", "http://192.168.86.100:8080/update-thermostat/?threshold=" + thermostat + "&mode=" + boilerMode, false);
     xmlHttp.send(null);
     console.log(xmlHttp.responseText);
     var data = JSON.parse(xmlHttp.responseText);
@@ -93,6 +96,12 @@ function App() {
           Smart Switch State: {brainState?.SmartSwitchOn ? "on" : "off"}
         </div>
         <div>
+          Boiler Mode:
+          <button disabled={boilerMode === "off"} onClick={() => setBoilerMode("off")}>Off</button>
+          <button disabled={boilerMode === "auto"} onClick={() => setBoilerMode("auto")}>Auto</button>
+          <button disabled={boilerMode === "on"} onClick={() => setBoilerMode("on")}>On</button>
+        </div>
+        <div>
           Current Temperature: {brainState?.TemperatureCelsius}
         </div>
         <div>
@@ -106,7 +115,7 @@ function App() {
             <span id="thermostat-threshold-celsius-saved"></span>
           </label>
           <button
-            disabled={(brainState?.ThermostatThresholdCelsius || "") === thermostat}
+            disabled={(brainState?.ThermostatThresholdCelsius || "") === thermostat && (brainState?.BoilerMode) === boilerMode}
             onClick={setNewThermostatValue}
           >
             Set

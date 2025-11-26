@@ -14,6 +14,7 @@ type UpdateThermostatResponse struct {
 	SmartSwitchOn              bool
 	TemperatureCelsius         float64
 	ThermostatThresholdCelsius float64
+	BoilerMode                 string
 }
 
 func (h Handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +32,21 @@ func (h Handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	mode := r.URL.Query().Get("mode")
+	if mode != "" {
+		err := h.stores.BoilerMode.Store(mode)
+		if err != nil {
+			h.loggers.Get("brain").Logf("error writing boiler mode value: %s", err.Error())
+		}
+		h.loggers.SlackLogger.Log(fmt.Sprintf("Boiler mode set to %s", mode))
+	}
+
 	boilerState := h.boiler.GetBoilerState(false)
+
+	boilerMode := h.stores.BoilerMode.GetLatestValueOrDefault()
+	if boilerMode == "" {
+		boilerMode = "auto"
+	}
 
 	response := UpdateThermostatResponse{
 		PollDelayMs:                1000,
@@ -40,6 +55,7 @@ func (h Handlers) UpdateThermostatHandler(w http.ResponseWriter, r *http.Request
 		SmartSwitchOn:              h.boiler.GetSmartSwitchStatus().Bool(),
 		TemperatureCelsius:         h.boiler.GetTemperature(),
 		ThermostatThresholdCelsius: h.stores.Thermostat.GetLatestValueOrDefault(),
+		BoilerMode:                 boilerMode,
 	}
 	writeJSON(w, response)
 }

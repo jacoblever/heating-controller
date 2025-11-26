@@ -45,6 +45,10 @@ func (b Boiler) GetBoilerState(logChange bool) BoilerState {
 	currentTemperature := b.GetTemperature()
 	thermostatThreshold := b.stores.Thermostat.GetLatestValueOrDefault()
 	smartSwitchOn := b.GetSmartSwitchStatus()
+	mode := b.stores.BoilerMode.GetLatestValueOrDefault()
+	if mode == "" {
+		mode = "auto"
+	}
 
 	currentBoilerStateRecord, err := b.stores.BoilerState.GetLatestValue()
 	if err != nil {
@@ -55,12 +59,18 @@ func (b Boiler) GetBoilerState(logChange bool) BoilerState {
 	currentBoilerState := currentBoilerStateRecord.Value()
 
 	boilerState := timeseries.Off
-	if smartSwitchOn {
-		if currentBoilerState == timeseries.Off && currentTemperature < thermostatThreshold-debounceBuffer {
-			boilerState = timeseries.On
-		}
-		if currentBoilerState == timeseries.On && currentTemperature < thermostatThreshold {
-			boilerState = timeseries.On
+	if mode == "on" {
+		boilerState = timeseries.On
+	} else if mode == "off" {
+		boilerState = timeseries.Off
+	} else {
+		if smartSwitchOn {
+			if currentBoilerState == timeseries.Off && currentTemperature < thermostatThreshold-debounceBuffer {
+				boilerState = timeseries.On
+			}
+			if currentBoilerState == timeseries.On && currentTemperature < thermostatThreshold {
+				boilerState = timeseries.On
+			}
 		}
 	}
 

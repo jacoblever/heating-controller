@@ -11,6 +11,7 @@ type Config struct {
 	SmartSwitchStateLogFilePath    string
 	BoilerStateLogFilePath         string
 	BoilerLogFilePath              string
+	BoilerModeLogFilePath          string
 }
 
 var DefaultConfig Config = Config{
@@ -24,6 +25,7 @@ var DefaultConfig Config = Config{
 	SmartSwitchStateLogFilePath:    "./smart-switch-state-log.txt",
 	BoilerStateLogFilePath:         "./boiler-state-log.txt",
 	BoilerLogFilePath:              "./boiler-log.txt",
+	BoilerModeLogFilePath:          "./boiler-mode-log.txt",
 }
 
 func (c Config) AllFilePaths() []string {
@@ -38,5 +40,6 @@ func (c Config) AllFilePaths() []string {
 		c.SmartSwitchStateLogFilePath,
 		c.BoilerStateLogFilePath,
 		c.BoilerLogFilePath,
+		c.BoilerModeLogFilePath,
 	}
 }

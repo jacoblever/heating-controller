@@ -19,6 +19,7 @@ type Stores struct {
 	Thermostat         timeseries.ValueStore[float64]
 	SmartSwitch        timeseries.ValueStore[timeseries.OnOff]
 	BoilerState        timeseries.ValueStore[timeseries.OnOff]
+	BoilerMode         timeseries.ValueStore[string]
 }
 
 func MakeStores(c clock.Clock, config Config) Stores {
@@ -31,5 +32,6 @@ func MakeStores(c clock.Clock, config Config) Stores {
 		Thermostat:  timeseries.MakeFloatValueStore(c, config.ThermostatThresholdLogFilePath, true, nil, defaultThermostatThreshold),
 		SmartSwitch: timeseries.MakeOnOffValueStore(c, config.SmartSwitchStateLogFilePath, true, nil),
 		BoilerState: timeseries.MakeOnOffValueStore(c, config.BoilerStateLogFilePath, true, nil),
+		BoilerMode:  timeseries.MakeStringValueStore(c, config.BoilerModeLogFilePath, true, nil),
 	}
 }
