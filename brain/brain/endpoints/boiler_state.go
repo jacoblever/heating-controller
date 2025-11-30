@@ -2,7 +2,7 @@ package endpoints
 
 import "net/http"
 
-var boilerSwitchStepCountOn = 300
+var boilerSwitchStepCountOn = 250
 var boilerSwitchStepCountOff = 250
 
 type BoilerStateResponse struct {
